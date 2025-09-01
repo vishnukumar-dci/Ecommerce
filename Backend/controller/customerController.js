@@ -70,7 +70,7 @@ async function login(req,res,next) {
             throw error
         }
 
-        const token = jwt.sign({id:existingCustomer[0].id},process.env.SECRET_KEY,{ expiresIn: '1hr'})
+        const token = jwt.sign({id:existingCustomer[0].id,role:existingCustomer[0].roles},process.env.SECRET_KEY,{ expiresIn: '1hr'})
 
         const user = {
             name:existingCustomer[0].name,
@@ -89,6 +89,7 @@ async function login(req,res,next) {
 async function update(req,res,next) {
 
     const{name} = req.body
+
     const id = req.user.id
 
     try {

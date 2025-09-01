@@ -58,6 +58,9 @@ export default function AdminPage() {
         <h2 className="font-semibold mb-3">Orders</h2>
         <div>
           <a href="/admin/orders" className="text-blue-600 hover:underline">View all orders</a>
+          <div className="mt-2">
+            <a href="/admin/logs" className="text-blue-600 hover:underline">View logs</a>
+          </div>
         </div>
       </div>
 

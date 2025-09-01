@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import Image from "next/image";
 import { api, assetUrl } from "@/lib/api";
 import { useAuth } from "@/lib/store/auth";
@@ -7,190 +7,141 @@ import AdminOrders from "@/app/admin/orders";
 
 export default function OrdersPage() {
   const role = useAuth((s) => s.role);
-  
-  if (role === 'admin') return <AdminOrders />;
+
+  if (role === "admin") return <AdminOrders />;
+
   const [rows, setRows] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  // pagination for customer view
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
-
-  // date range filters
-  const [fromDate, setFromDate] = useState<string>("");
-  const [toDate, setToDate] = useState<string>("");
+  const [limit] = useState(10);
+  const [total, setTotal] = useState(0);
 
   useEffect(() => {
-    (async () => {
-      setLoading(true); setError(null);
-  try {
-  const res = await api.customerOrders();
-  const payload = res as any;
-  console.log('orders page: customerOrders raw response', payload)
-    // backend may return grouped orders: { history: [...] } or legacy flat rows
-    let rowsFromApi: any[] = payload.history || payload.orders || [];
-
-    // if the API returned flat order-item rows (each row contains product_name/qty)
-    // but no 'items' array on the entries, group them into orders so Products render
-    if (Array.isArray(rowsFromApi) && rowsFromApi.length > 0) {
-      const first = rowsFromApi[0];
-      const looksFlat = !(first.items || first.order_items) && (first.product_name || first.name || first.qty || first.price);
-      if (looksFlat) {
-        const map = new Map<string, any>();
-        rowsFromApi.forEach((r: any, i: number) => {
-          const oid = r.orderId ?? r.id ?? r.order_id ?? `order_${i}`;
-          if (!map.has(oid)) {
-            map.set(oid, {
-              orderId: oid,
-              total: r.total ?? r.amount ?? r.order_total ?? 0,
-              status: r.status ?? r.payment_status ?? r.order_status,
-              date: r.date ?? r.order_date ?? r.created_at,
-              items: [] as any[],
-            });
+    const fetchOrders = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const res = await api.customerOrders(page, limit);
+        console.log(res)
+        const grouped = res.history.reduce((acc: any[], row: any) => {
+          let order = acc.find((o) => o.id === row.id);
+          if (!order) {
+            order = {
+              id: row.id,
+              payment_status: row.payment_status,
+              created_at: row.created_at,
+              items: []
+            };
+            acc.push(order);
           }
-          const entry = map.get(oid);
-          entry.items.push({
-            product_name: r.product_name ?? r.name,
-            qty: r.qty ?? r.quantity ?? 1,
-            price: r.price ?? r.item_price ?? 0,
-            image_path: r.image_path ?? r.image,
+          order.items.push({
+            product_name: row.product_name,
+            qty: row.qty,
+            price: row.price,
+            image_path: row.image_path,
           });
-        });
-        rowsFromApi = Array.from(map.values());
-      }
-    }
+          return acc;
+        }, []);
 
-    setRows(rowsFromApi || []);
+        setRows(grouped);
+        setTotal(res.totalRecords || 0);
       } catch (e: any) {
         setError(e.message || "Failed to load orders");
       } finally {
         setLoading(false);
       }
-    })();
-  }, []);
+    };
 
-  // apply date-range filter to the grouped rows returned by the backend
-  const filteredOrders = useMemo(() => {
-    return rows.filter((order: any) => {
-      if ((fromDate || toDate) && order.date) {
-        const d = new Date(order.date);
-        if (fromDate) {
-          const f = new Date(fromDate);
-          if (d < f) return false;
-        }
-        if (toDate) {
-          const t = new Date(toDate);
-          t.setHours(23,59,59,999);
-          if (d > t) return false;
-        }
-      }
-      // if no date filters, include all
-      return true;
-    })
-  }, [rows, fromDate, toDate]);
-
-  // pagination helpers
-  const totalPages = Math.max(1, Math.ceil(filteredOrders.length / pageSize));
-  const paged = filteredOrders.slice((page - 1) * pageSize, page * pageSize);
+    fetchOrders();
+  }, [page, limit]);
 
   return (
-    <div className="min-h-full space-y-6">
-      <h1 className="text-2xl font-semibold">Your Orders</h1>
-      {/* Date range filter (right-aligned) */}
-      <div className="flex justify-end items-center gap-2">
-        <input type="date" value={fromDate} onChange={(e) => { setFromDate(e.target.value); setPage(1); }} className="border rounded px-2 py-1 bg-white text-black" />
-        <input type="date" value={toDate} onChange={(e) => { setToDate(e.target.value); setPage(1); }} className="border rounded px-2 py-1 bg-white text-black" />
-        <button onClick={() => { setFromDate(""); setToDate(""); setPage(1); }} className="ml-2 px-3 py-1 bg-gray-200 rounded">Reset</button>
+    <div className="p-4">
+      <h2 className="text-xl font-bold mb-4">My Orders</h2>
+
+      {loading && <p>Loading orders...</p>}
+      {error && <p className="text-red-500">{error}</p>}
+
+      {!loading && rows.length === 0 && <p>No orders found.</p>}
+
+      {rows.map((o) => {
+        const totalQty = o.items.reduce((sum: number, i: any) => sum + i.qty, 0);
+        const totalAmount = o.items.reduce(
+          (sum: number, i: any) => sum + i.qty * i.price,
+          0
+        );
+
+        return (
+          <div
+            key={o.id}
+            className="border rounded-lg p-4 mb-4 shadow-sm bg-white"
+          >
+            <div className="flex justify-between items-center mb-2">
+              <div>
+                <p className="font-semibold">Order #{o.id}</p>
+                <p className="text-sm text-gray-500">
+                  {new Date(o.created_at).toLocaleString()}
+                </p>
+              </div>
+              <span
+                className={`px-2 py-1 rounded text-sm ${
+                  o.payment_status === "paid"
+                    ? "bg-green-100 text-green-600"
+                    : "bg-yellow-100 text-yellow-600"
+                }`}
+              >
+                {o.payment_status}
+              </span>
+            </div>
+
+            <div className="space-y-2">
+              {o.items.map((item: any, idx: number) => (
+                <div key={idx} className="flex items-center gap-3">
+                  <img
+                    src={item.image_path}
+                    alt={item.product_name}
+                    className="w-12 h-12 object-cover rounded"
+                  />
+                  <div className="flex-1">
+                    <p className="font-medium">{item.product_name}</p>
+                    <p className="text-sm text-gray-500">
+                      Qty: {item.qty} × ₹{item.price}
+                    </p>
+                  </div>
+                  <p className="font-semibold">₹{item.qty * item.price}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-3 flex justify-between border-t pt-2 text-sm font-semibold">
+              <span>Total Items: {totalQty}</span>
+              <span>Total: ₹{totalAmount}</span>
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Pagination */}
+      <div className="flex justify-center mt-4 gap-2">
+        <button
+          onClick={() => setPage((p) => Math.max(p - 1, 1))}
+          disabled={page === 1}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Prev
+        </button>
+        <span className="px-3 py-1">
+          Page {page} of {Math.ceil(total / limit) || 1}
+        </span>
+        <button
+          onClick={() => setPage((p) => (p * limit < total ? p + 1 : p))}
+          disabled={page * limit >= total}
+          className="px-3 py-1 border rounded disabled:opacity-50"
+        >
+          Next
+        </button>
       </div>
-
-      {loading ? (
-        <div>Loading...</div>
-      ) : error ? (
-        <div className="text-red-600">{error}</div>
-        ) : filteredOrders.length === 0 ? (
-        <div>You haven’t placed any orders yet. Start shopping today!</div>
-      ) : (
-        <div className="space-y-4">
-          {/* table view with pagination */}
-          <div className="overflow-x-auto bg-white rounded border">
-            <table className="w-full table-auto border-collapse">
-              <thead>
-                <tr className="text-left">
-                  <th className="p-2">Order ID</th>
-                  <th className="p-2">Products</th>
-                  <th className="p-2">Items</th>
-                  <th className="p-2">Total</th>
-                  <th className="p-2">Status</th>
-                  <th className="p-2">Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {paged.map((o: any, idx: number) => {
-                  const items = o.items || o.order_items || [];
-                  // compute total robustly
-                  let total = Number(o.total ?? o.amount ?? 0);
-                  if (!isFinite(total) || total === 0) {
-                    const computed = (items || []).reduce((s: number, it: any) => {
-                      const price = Number(it.price ?? it.item_price ?? 0) || 0;
-                      const qty = Number(it.qty ?? it.quantity ?? 1) || 0;
-                      return s + price * qty;
-                    }, 0);
-                    total = computed;
-                  }
-                  if (!isFinite(total)) total = 0;
-
-                  return (
-                    <tr key={o.orderId || idx} className="border-t align-top">
-                      <td className="p-2 align-top">{o.orderId || o.id}</td>
-                      <td className="p-2 align-top">
-                        <div className="flex flex-col gap-2">
-                          {(items || []).map((it: any, i: number) => (
-                            <div key={i} className="flex items-center gap-3">
-                              <div className="w-12 h-12 flex-shrink-0">
-                                <Image src={assetUrl(it.image_path) || "https://via.placeholder.com/100"} alt={it.product_name || it.name || "product"} width={48} height={48} className="rounded-md object-cover" />
-                              </div>
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm line-clamp-1">{it.product_name || it.name || '-'}</div>
-                                <div className="text-xs text-slate-500">₹{Number(it.price ?? it.item_price ?? 0).toLocaleString()}</div>
-                              </div>
-                              <div>
-                                <span className="inline-flex items-center justify-center bg-gray-100 text-sm text-slate-700 rounded-full w-8 h-8">{it.qty ?? it.quantity ?? 1}</span>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </td>
-                      <td className="p-2 align-top">{(items || []).reduce((s: number, it: any) => s + (Number(it.qty ?? it.quantity ?? 1) || 0), 0)}</td>
-                      <td className="p-2 align-top">₹{Number(total || 0).toLocaleString()}</td>
-                      <td className="p-2 align-top">{o.status || o.payment_status}</td>
-                      <td className="p-2 align-top">{o.date ? new Date(o.date).toLocaleString() : (o.order_date ? new Date(o.order_date).toLocaleString() : '-')}</td>
-                    </tr>
-                  )
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="flex items-center justify-between mt-3">
-            <div className="flex items-center gap-2">
-              <label className="text-sm text-slate-600">Page size</label>
-              <select value={pageSize} onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }} className="border rounded px-2 py-1">
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-              </select>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => setPage(1)} disabled={page === 1} className="px-2 py-1 border rounded">First</button>
-              <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-2 py-1 border rounded">Prev</button>
-              <div className="text-sm">Page {page} / {totalPages}</div>
-              <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-2 py-1 border rounded">Next</button>
-              <button onClick={() => setPage(totalPages)} disabled={page === totalPages} className="px-2 py-1 border rounded">Last</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

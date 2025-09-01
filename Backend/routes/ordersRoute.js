@@ -13,8 +13,11 @@ router.get('/payment-status',inputValidate.updateOrder,validate.validateInputs,o
 
 router.get('/userhistory',validate.validateBearer,orderController.itemHistory)
 
-router.get('/history', orderController.orderHistory)
-
 router.put('/update',validate.validateBearer,orderController.updateOrder)
+
+//admin
+router.get('/history', validate.validateBearer,validate.isAdmin,orderController.orderHistory)
+
+router.get('/log',validate.validateBearer,validate.isAdmin,orderController.stripeLogs);
 
 module.exports = router

@@ -5,16 +5,17 @@ const upload = require('../config/multer')
 const validate = require('../middleware/validateSessionAndToken')
 const inputValidate = require('../middleware/validations')
 
-router.post('/create', upload.single('image'), productController.createProduct)
-
 router.get('/list',productController.getItems)
 
 router.get('/cartitem',inputValidate.getCartProduct,validate.validateInputs,validate.validateBearer,productController.getProduct)
 
-router.put('/update', upload.single('image'), productController.updateById)
+//admin access only
+router.post('/create',validate.validateBearer,validate.isAdmin ,upload.single('image'), productController.createProduct)
 
-router.delete('/delete',productController.deleteProduct)
+router.put('/update', validate.validateBearer,validate.isAdmin,upload.single('image'), productController.updateById)
 
-router.get('/homepage',productController.HomePageImage)
+router.delete('/delete',validate.validateBearer,validate.isAdmin,productController.deleteProduct)
+
+router.get('/homepage',validate.validateBearer,validate.isAdmin,productController.HomePageImage)
 
 module.exports = router

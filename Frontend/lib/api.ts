@@ -126,14 +126,24 @@ export const api = {
     apiFetch<any>("/order/create", { method: "POST", body }),
   updateOrder: (orderId: number, sessionId?: string, status?: string) => 
     apiFetch<any>("/order/update", { method: "PUT", params: { orderId, session_Id: sessionId, status } }),
-  orderHistory: async () => {
-    const res = await apiFetch<{history: any[]}>("/order/history")
+  orderHistory: async (page:number ,limit :number) => {
+    const res = await apiFetch<{history: any[],totalRecords:any}>("/order/history?page="+page+"&limit="+limit)
     console.log('api.orderHistory: response', res)
     return res
   },
-  customerOrders: async () => {
-    const res = await apiFetch<{orders: any[]}>("/order/userhistory")
-    console.log('api.customerOrders: response', res)
+  // customerOrders: async (page:number,limit:number) => {
+  //   const res = await apiFetch<{orders: any[],totalRecords:any}>("/order/userhistory?page="+page+"&limit="+limit)
+  //   console.log('api.customerOrders: response', res)
+  //   return res
+  // },
+
+  customerOrders:(page:number,limit:number) =>
+    apiFetch<{history:any[],totalRecords:any}>("/order/userhistory",{method:"GET" , params:{page,limit}}),
+
+  /**Strip logs **/
+  stripeLogs: async() =>{
+    const res = await apiFetch<{logs: any[],totalLogs:any}>("/order/log")
+    console.log(`api.stripeLogs:response`,res)
     return res
-  },
+  } 
 };

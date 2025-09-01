@@ -144,7 +144,6 @@ async function webhookHandler(req, res, next) {
                 }
             }
         }
-
         res.json({ received: true });
     } catch (err) {
         next(err);
@@ -152,9 +151,20 @@ async function webhookHandler(req, res, next) {
 }
 
 async function itemHistory(req,res,next) {
+    
     try{
-        const result = await orderModel.userhistory(req.user.id)
-        res.json({history:result})
+        const page = parseInt(req.query.page)||1
+        const limit = parseInt(req.query.limit)||10
+        const offset = (page -1) * limit
+
+        const records = await orderModel.countById(req.user.id)
+        const total = records[0].total
+        const result = await orderModel.userhistory(req.user.id,limit,offset)
+
+        res.status(200).json({
+            history:result,
+            totalRecords:total
+        })
     } catch (error) {
         next(error)
     }
@@ -162,11 +172,43 @@ async function itemHistory(req,res,next) {
 
 async function orderHistory(req,res,next) {
     try {
-    const result = await orderModel.history() 
-    res.status(200).json({history:result})
+    const page = parseInt(req.query.page)||1
+    const limit = parseInt(req.query.limt)||10
+    const offset = (page - 1) * limit
+
+    const results = await orderModel.count()
+    
+    const total = results[0].total
+
+    const result = await orderModel.history(limit,offset) 
+    res.status(200).json({
+        totalRecords:total,
+        history:result
+    })
     } catch (error) {
         next(error)
     }
 }
 
-module.exports = {createOrder,updateOrder,itemHistory,orderHistory, webhookHandler}
+async function stripeLogs(req,res,next) {
+    try {
+        const paymentIntents = await stripe.paymentIntents.list({limit:30})
+        
+        const filterRecord = paymentIntents.data.map(pi => ({
+            id:pi.id,
+            amount:pi.amount,
+            amount_received:pi.amount_received,
+            currency:pi.currency,
+            status:pi.status,
+            payment_method_type:pi.payment_method_types,
+            created_at:pi.created
+        }))
+        const totalLogs = filterRecord.length;
+        res.status(200).json({logs:filterRecord,totalLogs})
+
+    } catch (error) {
+        next(error)
+    }
+}
+
+module.exports = {createOrder,updateOrder,itemHistory,orderHistory, webhookHandler,stripeLogs}

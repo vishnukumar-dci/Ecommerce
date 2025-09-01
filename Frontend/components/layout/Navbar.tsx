@@ -75,6 +75,7 @@ export default function Navbar() {
             <span className={`absolute -top-1 -right-2 rounded-full bg-red-600 text-white text-xs px-2 ${mounted && count > 0 ? '' : 'hidden'}`}>{mounted ? count : ''}</span>
           </Link>
           <Link href="/orders" className="px-3 py-2 rounded-md hover:bg-slate-50">Orders</Link>
+          <Link href="/logs" className={`relative flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-50 ${isAdmin ? '' : 'hidden'}`}>Logs</Link>
           <Link href="/profile" className="flex items-center gap-2 px-3 py-2 rounded-md hover:bg-slate-50"><User size={18}/> <span>Profile</span></Link>
         </nav>
       </div>

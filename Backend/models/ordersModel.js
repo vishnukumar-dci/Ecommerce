@@ -19,7 +19,6 @@ async function create(customerId) {
 
 async function update(amount,status,orderId) {
     try {
-        // Update amount and payment_status. Do not assume a specific date column here.
         const [row] = await pool.query("UPDATE orders SET amount = ?, payment_status = ? WHERE id = ?", [amount, status, orderId])
         if(!row.affectedRows){
             const error = new Error('Failed to update the order by Id')
@@ -43,12 +42,26 @@ async function getById(orderId) {
     }
 }
 
-async function userhistory(userId) {
+async function userhistory(userId,limit,offset) {
     try {
       
         const [row] = await pool.query(
-            "SELECT o.id,o.payment_status,p.product_name,ot.qty,p.image_path,p.amount as price,o.created_at FROM orders o INNER JOIN order_items ot ON ot.order_id = o.id INNER JOIN products p ON p.id = ot.product_id where o.user_id = ?",
-        [userId])
+            `SELECT 
+                    o.id,
+                    o.payment_status,
+                    p.product_name,
+                    ot.qty,
+                    p.image_path,
+                    p.amount as price,
+                    o.created_at 
+                    FROM orders o 
+                    INNER JOIN order_items ot 
+                    ON ot.order_id = o.id 
+                    INNER JOIN products p 
+                    ON p.id = ot.product_id 
+                    WHERE o.user_id = ?
+                    ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+            [userId,limit,offset])
         return row
     } catch (error) {
         error.message = error.message || 'Database error while getting history by id'
@@ -56,14 +69,50 @@ async function userhistory(userId) {
     }
 }
 
-async function history() {
+async function history(limit,offset) {
     try {
             const [row] = await pool.query(
-                "SELECT o.id,c.name,o.payment_status,p.product_name,ot.qty,p.amount,o.created_at FROM orders o INNER JOIN customer c ON o.user_id = c.id INNER JOIN order_items ot ON ot.order_id = o.id INNER JOIN products p ON p.id = ot.product_id"
-            )
+                `SELECT o.id,
+                        c.name,
+                        o.payment_status,
+                        p.product_name,
+                        ot.qty,p.amount,
+                        o.created_at 
+                        FROM orders o 
+                        INNER JOIN customer c 
+                        ON o.user_id = c.id 
+                        INNER JOIN order_items ot 
+                        ON ot.order_id = o.id 
+                        INNER JOIN products p 
+                        ON p.id = ot.product_id
+                        ORDER BY o.created_at DESC LIMIT ? OFFSET ?`
+            ,[limit,offset])
+
             return row
     } catch (error) {
-        error.message = error.message || 'Database error while getting history of user orders'
+        error.message = error.message || 'Database error while getting history of users orders'
+        throw error
+    }
+}
+
+async function count() {
+    try {
+        const  [row] = await pool.query(
+            `SELECT COUNT(*) AS total FROM orders;`
+        )
+        return row
+    } catch (error) {
+        error.message = error.message || 'Database error while getting history of users orders'
+        throw error
+    }
+}
+
+async function countById(userId) {
+    try {
+        const [row] = await pool.query("SELECT COUNT(*) AS total FROM orders WHERE user_id = ?",[userId])
+        return row
+    } catch (error) {
+        error.message = error.message || 'Database error while getting history of users orders'
         throw error
     }
 }
@@ -73,5 +122,7 @@ module.exports = {
     update,
     getById,
     userhistory,
-    history
+    history,
+    count,
+    countById
 }

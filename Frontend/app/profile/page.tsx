@@ -139,6 +139,7 @@ export default function ProfilePage() {
         image: formData.image,
       });
 
+      
       const newUser = res.user;
       const newToken = res.token || auth.token;
 
