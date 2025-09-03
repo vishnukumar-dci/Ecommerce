@@ -43,27 +43,31 @@ export async function apiFetch<T>(
   }
 
   console.log(`apiFetch: ${method} ${url} ${token ? '(with token)' : '(no token)'}`)
+
+  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const finalHeaders: Record<string, string> = {
+    ...(isFormData ? {} : { "Content-Type": "application/json" }),
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(headers || {}),
+  };
+
   const res = await fetch(url, {
     method,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...(headers || {}),
-    },
-    body: body ? JSON.stringify(body) : undefined,
+    headers: finalHeaders,
+    body: isFormData ? body : body ? JSON.stringify(body) : undefined,
     credentials: "include",
     cache: "no-store",
   });
 
   if (!res.ok) {
-    let msg = `Request failed ${res.status}`;
-    try {
-      const data = await res.json();
-      console.log(data)
-      msg = data?.message || msg;
-    } catch {}
-    throw new Error(msg);
-  }
+  let msg = `Request failed ${res.status}`;
+  try {
+    const data = await res.json();
+    console.log("apiFetch error response:", data);
+    msg = typeof data?.message === "string" ? data.message : JSON.stringify(data);
+  } catch {}
+  throw new Error(msg);
+}
   return (await res.json()) as T;
 }
 
@@ -93,17 +97,30 @@ export const api = {
     const list = res?.list || res?.data || [];
     return { list, data: list };
   },
+  
   /** Homepage - latest products (optional limit param) */
   homepageProducts: async () => {
     const res = await apiFetch<any>("/product/homepage", {method: "GET"});
-    const list = res?.list || res?.data || res?.products || [];
+    const list = res?.products || [];
     return { list, data: list };
   },
 
-  addProduct: (body: { name: string; description: string; amount: number }) =>
-    apiFetch<any>("/product/create", { method: "POST", body }),
-  updateProduct: (productId: number, body: { name?: string; description?: string; amount?: number }) =>
-    apiFetch<any>("/product/update", { method: "PUT", params: { productId }, body }),
+  addProduct: (body: { name: string; description: string; amount: number; image?: File }) => {
+    const form = new FormData();
+    form.append("name", body.name);
+    form.append("description", body.description);
+    form.append("amount", String(body.amount));
+    if (body.image) form.append("image", body.image);
+    return apiFetch<any>("/product/create", { method: "POST", body: form, headers: {} });
+  },
+  updateProduct: (productId: number, body: { name?: string; description?: string; amount?: number; image?: File }) => {
+    const form = new FormData();
+    if (body.name !== undefined) form.append("name", String(body.name));
+    if (body.description !== undefined) form.append("description", String(body.description));
+    if (body.amount !== undefined) form.append("amount", String(body.amount));
+    if (body.image) form.append("image", body.image);
+    return apiFetch<any>("/product/update", { method: "PUT", params: { productId }, body: form, headers: {} });
+  },
   deleteProduct: (productId: number) =>
     apiFetch<any>("/product/delete", { method: "DELETE", params: { productId } }),
 

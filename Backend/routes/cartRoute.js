@@ -7,7 +7,6 @@ const inputValidate = require('../middleware/validations')
 router.post('/create',validate.validateBearer,cartController.addTocart)
 
 router.get('/list',validate.validateBearer,cartController.getCartItems)
-// router.post('/list',cartController.getCartItems)
 
 router.delete('/delete',validate.validateBearer,cartController.deleteCartItems)
 

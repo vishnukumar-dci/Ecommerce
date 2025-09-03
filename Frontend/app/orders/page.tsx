@@ -8,14 +8,17 @@ import AdminOrders from "@/app/admin/orders";
 export default function OrdersPage() {
   const role = useAuth((s) => s.role);
 
-  if (role === "admin") return <AdminOrders />;
-
+  // IMPORTANT: keep hooks in the same order on every render.
+  // Declare hooks unconditionally (before any early return) so React's
+  // rules of hooks are not violated when we render <AdminOrders /> early.
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const [limit] = useState(10);
   const [total, setTotal] = useState(0);
+
+  if (role === "admin") return <AdminOrders />;
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -53,7 +56,10 @@ export default function OrdersPage() {
       }
     };
 
-    fetchOrders();
+  // don't run customer fetch when user is admin (we render AdminOrders)
+  if (role === "admin") return;
+
+  fetchOrders();
   }, [page, limit]);
 
   return (

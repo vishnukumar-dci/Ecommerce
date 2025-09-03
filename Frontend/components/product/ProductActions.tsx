@@ -11,6 +11,8 @@ export default function ProductActions({ product }: { product: any }) {
   const token = useAuth((s) => s.token);
   const userId = useAuth((s) => s.userId);
   const router = useRouter();
+  const items = useCart((s) => s.items)
+  const isInCart = items.some((i) => i.product_id === product.id)
 
   const ensureAuth = () => {
     if (!token || !userId) {
@@ -23,6 +25,7 @@ export default function ProductActions({ product }: { product: any }) {
 
   const handleAddToCart = async () => {
     if (!ensureAuth()) return;
+
     try {
       await api.cartAdd(Number(userId), Number(product.id));
       const cartItem: CartItem = {
@@ -58,6 +61,17 @@ export default function ProductActions({ product }: { product: any }) {
     }
   };
 
+  if(isInCart){
+    return (
+      <>
+      <Button className=" bg-[#AFB1B6] text-white hover:bg-[#AFB1B6]/80" onClick={() => router.push("/cart")}>
+          Go-to-Cart
+      </Button>
+
+      <Button onClick={handleBuyNow}>Buy Now</Button>
+      </>
+    )
+  }
   return (
     <>
       <Button onClick={handleAddToCart}>Add to Cart</Button>

@@ -96,11 +96,13 @@ import { clearAuthCookie } from "@/lib/cookies";
 import { useCart } from "@/lib/store/cart";
 import { Pencil } from "lucide-react";
 import { api } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 export default function ProfilePage() {
   const auth = useAuth();
   const clearCart = useCart((s) => s.clear);
 
+  const router = useRouter()
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
@@ -203,7 +205,7 @@ export default function ProfilePage() {
 
         {/* Action Buttons */}
         <div className="flex justify-between">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl">
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl" onClick={() => router.push('/products')}>
             Shop Now
           </Button>
           <Button

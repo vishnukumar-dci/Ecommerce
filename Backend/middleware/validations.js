@@ -14,7 +14,7 @@ const loginUser = [
 const createProduct = [
     body('name').notEmpty().trim().withMessage('Name cannot be a empty'),
     body('description').notEmpty().trim().withMessage('Descriptions cannot be a empty'),
-    body('amount').isInt({min:1}).withMessage('Price must be greater than 1')
+    body('amount').isInt({min:10}).withMessage('Price must be greater than 10')
 ]
 
 const updateProduct = [

@@ -10,6 +10,7 @@ export type Product = {
   descriptions: string;
   amount: number;
   image_path: string;
+  in_cart:number;
 };
 
 export type User = {

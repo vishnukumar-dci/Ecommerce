@@ -3,8 +3,9 @@ const productModel = require('../models/productsModel')
 const cartModel = require('../models/cartModel')
 const orderItemModel = require('../models/orderItemModel')
 const logger = require('../helper/logger')
-const Stripe = require('stripe')
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+// const Stripe = require('stripe')
+// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
+const stripe = require('../helper/stripe')
 
 async function createOrder(req,res,next) {
 
@@ -30,6 +31,7 @@ async function createOrder(req,res,next) {
                 products.push(product[0])
             }
         }
+        
         const lineItems = products.map((item) => ({
             price_data:{
                 currency:'INR',
@@ -39,18 +41,22 @@ async function createOrder(req,res,next) {
             quantity:Number(item.qty)
         }))
 
-        const session = await stripe.checkout.sessions.create({
-            payment_method_types: ['card'],
-            mode: "payment",
-            line_items:lineItems,
-            allow_promotion_codes: true,
-            // include orderId and userId in metadata so webhook can verify and process the order
-            metadata: { orderId: String(orderId), userId: String(userId) },
-            success_url: `http://localhost:8088/order/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
-            cancel_url: `http://localhost:8088/order/payment-status?status=declined&orderId=${orderId}`
-        })
+        const redirect_url = stripe.sessionCreation(lineItems)
+        // const session = await stripe.checkout.sessions.create({
+        //     payment_method_types: ['card'],
+        //     mode: "payment",
+        //     line_items:lineItems,
+        //     allow_promotion_codes: true,
+        //     // include orderId and userId in metadata so webhook can verify and process the order
+        //     metadata: { orderId: String(orderId), userId: String(userId) },
+        //     success_url: `http://localhost:8088/order/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
+        //     cancel_url: `http://localhost:8088/order/payment-status?status=declined&orderId=${orderId}`
+        // })
 
-        return res.status(200).json({ url: session.url })
+
+
+        logger.info(`Checkout session and order created successfully for id ${userId}`)
+        return res.status(200).json({ url: redirect_url })
     } catch (error) {
         next(error)
     }
@@ -98,6 +104,7 @@ async function updateOrder(req,res,next) {
 }
 
 async function webhookHandler(req, res, next) {
+    
     const sig = req.headers['stripe-signature'];
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
     let event;
@@ -129,7 +136,6 @@ async function webhookHandler(req, res, next) {
                 // update order record
                 await orderModel.update(amount, 'paid', orderId);
 
-                // move cart items to order_items and then delete them
                 if (userId) {
                     const cartItems = await cartModel.find(userId);
                     console.log(`Webhook: found ${cartItems.length} cart items for user ${userId}`);
@@ -161,6 +167,7 @@ async function itemHistory(req,res,next) {
         const total = records[0].total
         const result = await orderModel.userhistory(req.user.id,limit,offset)
 
+        logger.info(`Customer OrderHistory Retrieved Successfully id=${req.user.id}`)
         res.status(200).json({
             history:result,
             totalRecords:total
@@ -181,6 +188,8 @@ async function orderHistory(req,res,next) {
     const total = results[0].total
 
     const result = await orderModel.history(limit,offset) 
+
+    logger.info(`Orders History Retrieve Successfully for Admin`)
     res.status(200).json({
         totalRecords:total,
         history:result
@@ -192,19 +201,22 @@ async function orderHistory(req,res,next) {
 
 async function stripeLogs(req,res,next) {
     try {
-        const paymentIntents = await stripe.paymentIntents.list({limit:30})
+        const paymentIntents = await stripe.paymentIntents.list({limit:60})
+
+        const filterRecord = paymentIntents.data.filter(pi => pi.status !== 'succeeded')
+        res.json({filterRecord})
         
-        const filterRecord = paymentIntents.data.map(pi => ({
-            id:pi.id,
-            amount:pi.amount,
-            amount_received:pi.amount_received,
-            currency:pi.currency,
-            status:pi.status,
-            payment_method_type:pi.payment_method_types,
-            created_at:pi.created
-        }))
-        const totalLogs = filterRecord.length;
-        res.status(200).json({logs:filterRecord,totalLogs})
+        // const filterRecord = paymentIntents.data.map(pi => ({
+        //     id:pi.id,
+        //     amount:pi.amount,
+        //     amount_received:pi.amount_received,
+        //     currency:pi.currency,
+        //     status:pi.status,
+        //     payment_method_type:pi.payment_method_types,
+        //     created_at:pi.created
+        // }))
+        // const totalLogs = filterRecord.length;
+        // res.status(200).json({logs:filterRecord,totalLogs})
 
     } catch (error) {
         next(error)

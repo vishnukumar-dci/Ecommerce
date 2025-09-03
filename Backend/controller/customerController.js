@@ -3,27 +3,7 @@ const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken')
 const logger = require('../helper/logger')
 
-// async function signupRender(req,res,next) {
-//     try {
-//         if(req.session.user)
-//             return res.redirect('/profile')
-//         res.render('signup',{user:req.session.user})
-//     } catch (error) {
-//         next(error)
-//     }
-// }
-
-// async function loginRender(req,res,next) {
-//     try {
-//         if(req.session.user)
-//             return res.redirect('/profile')
-//         res.render('login',{user:req.session.user})
-//     } catch (error) {
-//         next(error)
-//     }
-// }
-
-    async function register(req,res,next) {
+async function register(req,res,next) {
 
         const {name,email,passwords} = req.body
         try {
@@ -41,7 +21,7 @@ const logger = require('../helper/logger')
 
             await customerModel.create(name,email,hashPassword)
 
-            // logger.info(`Customer Registerd Successfully for email:${email}`)
+            logger.info(`Customer Registerd Successfully for email:${email}`)
            
             res.status(201).json({message:'Registration successful'})
         } catch (error) {
@@ -79,7 +59,7 @@ async function login(req,res,next) {
             image:existingCustomer[0].image_path
         }
 
-        // logger.info(`Customer Login Successfully email:${email}`)
+        logger.info(`Customer Login Successfully email:${email}`)
         res.status(200).json({message:'Login successful',token:token,user:user})
     } catch (error) {
         next(error)

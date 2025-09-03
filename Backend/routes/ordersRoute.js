@@ -18,6 +18,6 @@ router.put('/update',validate.validateBearer,orderController.updateOrder)
 //admin
 router.get('/history', validate.validateBearer,validate.isAdmin,orderController.orderHistory)
 
-router.get('/log',validate.validateBearer,validate.isAdmin,orderController.stripeLogs);
+router.get('/log',orderController.stripeLogs);
 
 module.exports = router

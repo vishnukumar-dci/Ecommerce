@@ -18,10 +18,33 @@ async function create(name,description,price,imagePath) {
     }
 }
 
+async function getAllById(userId) {
+    try {
+        const [rows] = await pool.query(
+            `SELECT 
+                p.id,
+                p.product_name,
+                p.descriptions,
+                p.amount,
+                p.image_path,    
+                CASE 
+                    WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS in_cart
+             FROM products p 
+             LEFT JOIN cart c 
+             ON c.product_id = p.id AND c.user_id = ?`
+        ,[userId])
+        return rows
+    } catch (error) {
+        error.message = error.message || 'Database error while getting products'
+        throw error
+    }
+}
+
 async function getAll() {
     try {
-        const [rows] = await pool.query("SELECT * FROM products")
-        
+        const [rows] = await pool.query(
+            `SELECT * FROM products`
+        )
         return rows
     } catch (error) {
         error.message = error.message || 'Database error while getting products'
@@ -32,12 +55,6 @@ async function getAll() {
 async function getById(id) {
     try {
         const [row] = await pool.query("SELECT * FROM products WHERE id = ?",[id])
-
-        // if(!row.length){
-        //     const error = new Error('Product not found')
-        //     error.statusCode = 404
-        //     throw error
-        // }
 
         return row
     } catch (error) {
@@ -106,4 +123,4 @@ async function imageRetreive() {
     }
 }
 
-module.exports = {create,getAll,getById,update,updateWithImage,deleteById,imageRetreive}
+module.exports = {create,getAll,getById,update,updateWithImage,deleteById,imageRetreive,getAllById}

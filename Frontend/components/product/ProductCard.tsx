@@ -30,15 +30,17 @@ export default function ProductCard({ product }: { product: Product }) {
 
 function EditButton({ productId }: { productId: number }) {
   const router = useRouter();
-  return <Button className="mt-3 w-full" variant="outline" onClick={() => router.push("/admin")}>Edit Product</Button>;
+  return <Button className="mt-3 w-full" variant="outline" onClick={() => router.push("/products")}>Edit Product</Button>;
 }
 
 function AddToCart({ product }: { product: Product }) {
+  const items = useCart((s) => s.items)
   const add = useCart((s) => s.add);
   const token = useAuth((s) => s.token);
   const userId = useAuth((s) => s.userId);
   const router = useRouter();
-  
+
+  const isInCart = items.some((i) => i.product_id=== product.id)
   const handleAddToCart = async () => {
     if (!token || !userId) {
       const redirect = typeof window !== "undefined" ? window.location.pathname : "/products";
@@ -60,6 +62,14 @@ function AddToCart({ product }: { product: Product }) {
       console.error("Failed to add to cart:", e);
     }
   };
-  
+
+  if(isInCart){
+    return (
+      <Button className="mt-3 w-full bg-[#AFB1B6] text-white hover:bg-[#AFB1B6]/80" onClick={() => router.push("/cart")}>
+          Go-to-Cart
+      </Button>
+    )
+  }
+
   return <Button className="mt-3 w-full" onClick={handleAddToCart}>Add to Cart</Button>;
 }

@@ -73,7 +73,7 @@ export default async function HomePage() {
         <h1 className="text-x1 font-semibold mb-4  text-brand-dark">Latest Products</h1>
         <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.slice(0, 8).map((p: any) => (
-            <ProductCard key={p.id} product={{ id: p.id, product_name: p.product_name || p.name, amount: p.amount, descriptions: p.descriptions || p.description || "", image_path: p.image_path || p.image }} />
+            <ProductCard key={p.id} product={{ id: p.id, product_name: p.product_name || p.name, amount: p.amount, descriptions: p.descriptions || p.description || "", image_path: p.image_path || p.image ||"",in_cart: p.in_cart }} />
           ))}
         </div>
       </section>
