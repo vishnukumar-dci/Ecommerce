@@ -4,7 +4,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { api, assetUrl } from "@/lib/api";
 import { useAuth } from "@/lib/store/auth";
-import { Link } from "lucide-react";
+import Link from "next/link";
 
 export default function CartPage() {
   const { items, remove, updateQty, total } = useCart();
@@ -68,21 +68,25 @@ export default function CartPage() {
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
-              {items.map((i) => (
-                <div key={i.id} className="flex items-center gap-4 p-4 rounded-2xl border bg-white">
-                  <Image src={assetUrl(i.image_path) || "https://via.placeholder.com/100"} alt="" width={100} height={100} className="rounded-xl object-cover" />
-                  <div className="flex-1">
-                    <div className="font-medium text-lg">{i.product_name}</div>
-                    <div className="text-slate-700 font-semibold mt-1">₹{Number(i.amount).toLocaleString()}</div>
-                    <div className="flex items-center gap-2 mt-3">
-                      <Button size="sm" onClick={() => dec(i.product_id, i.qty)}>-</Button>
-                      <span className="px-3">{i.qty}</span>
-                      <Button size="sm" onClick={() => inc(i.product_id, i.qty)}>+</Button>
-                      <Button variant="ghost" onClick={() => del(i.product_id)}>Remove</Button>
+              {items.map((i) => {
+                const pid = Number(i.product_id ?? i.id);
+                const qty = Number(i.qty ?? 0);
+                return (
+                  <div key={i.id ?? pid} className="flex items-center gap-4 p-4 rounded-2xl border bg-white">
+                    <Image src={assetUrl(i.image_path) || "https://via.placeholder.com/100"} alt="" width={100} height={100} className="rounded-xl object-cover" />
+                    <div className="flex-1">
+                      <div className="font-medium text-lg">{i.product_name}</div>
+                      <div className="text-slate-700 font-semibold mt-1">₹{Number(i.amount).toLocaleString()}</div>
+                      <div className="flex items-center gap-2 mt-3">
+                        <Button size="sm" onClick={() => dec(pid, qty)}>-</Button>
+                        <span className="px-3">{qty}</span>
+                        <Button size="sm" onClick={() => inc(pid, qty)}>+</Button>
+                        <Button variant="ghost" onClick={() => del(pid)}>Remove</Button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
             <div className="p-6 rounded-2xl border bg-white h-fit">
               <div className="flex justify-between">

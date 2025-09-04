@@ -60,6 +60,7 @@ async function userhistory(userId,limit,offset) {
                     INNER JOIN products p 
                     ON p.id = ot.product_id 
                     WHERE o.user_id = ?
+                    AND o.payment_status = 'paid'
                     ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
             [userId,limit,offset])
         return row

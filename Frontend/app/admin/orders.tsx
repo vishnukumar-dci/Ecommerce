@@ -10,7 +10,7 @@ export default function AdminOrdersPage() {
 
   // ui state
   const [page, setPage] = useState(1);
-  const limit = 10;
+  const limit = 5;
   const [total, setTotal] = useState(0);
 
   // sorting

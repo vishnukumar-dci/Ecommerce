@@ -102,6 +102,7 @@ export const api = {
   homepageProducts: async () => {
     const res = await apiFetch<any>("/product/homepage", {method: "GET"});
     const list = res?.products || [];
+    console.log(list) 
     return { list, data: list };
   },
 

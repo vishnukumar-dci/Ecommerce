@@ -3,9 +3,8 @@ const productModel = require('../models/productsModel')
 const cartModel = require('../models/cartModel')
 const orderItemModel = require('../models/orderItemModel')
 const logger = require('../helper/logger')
-// const Stripe = require('stripe')
-// const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
-const stripe = require('../helper/stripe')
+const Stripe = require('stripe')
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
 async function createOrder(req,res,next) {
 
@@ -41,22 +40,21 @@ async function createOrder(req,res,next) {
             quantity:Number(item.qty)
         }))
 
-        const redirect_url = stripe.sessionCreation(lineItems)
-        // const session = await stripe.checkout.sessions.create({
-        //     payment_method_types: ['card'],
-        //     mode: "payment",
-        //     line_items:lineItems,
-        //     allow_promotion_codes: true,
-        //     // include orderId and userId in metadata so webhook can verify and process the order
-        //     metadata: { orderId: String(orderId), userId: String(userId) },
-        //     success_url: `http://localhost:8088/order/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
-        //     cancel_url: `http://localhost:8088/order/payment-status?status=declined&orderId=${orderId}`
-        // })
+    // pass orderId and userId to the stripe helper so metadata and redirect urls are set correctly
+    // const redirect_url = await stripe.sessionCreation(lineItems, orderId, userId)
+        const session = await stripe.checkout.sessions.create({
+            payment_method_types: ['card'],
+            mode: "payment",
+            line_items:lineItems,
+            allow_promotion_codes: true,
+            // include orderId and userId in metadata so webhook can verify and process the order
+            metadata: { orderId: String(orderId), userId: String(userId) },
+            success_url: `http://localhost:8088/order/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
+            cancel_url: `http://localhost:8088/order/payment-status?status=declined&orderId=${orderId}`
+        })
 
-
-
-        logger.info(`Checkout session and order created successfully for id ${userId}`)
-        return res.status(200).json({ url: redirect_url })
+    logger.info(`Checkout session and order created successfully for id ${userId}`)
+    return res.status(200).json({ url: session.url })
     } catch (error) {
         next(error)
     }
@@ -203,20 +201,20 @@ async function stripeLogs(req,res,next) {
     try {
         const paymentIntents = await stripe.paymentIntents.list({limit:60})
 
-        const filterRecord = paymentIntents.data.filter(pi => pi.status !== 'succeeded')
-        res.json({filterRecord})
+        //const filterRecord = paymentIntents.data.filter(pi => pi.status !== 'succeeded')
+        // res.json({filterRecord})
         
-        // const filterRecord = paymentIntents.data.map(pi => ({
-        //     id:pi.id,
-        //     amount:pi.amount,
-        //     amount_received:pi.amount_received,
-        //     currency:pi.currency,
-        //     status:pi.status,
-        //     payment_method_type:pi.payment_method_types,
-        //     created_at:pi.created
-        // }))
-        // const totalLogs = filterRecord.length;
-        // res.status(200).json({logs:filterRecord,totalLogs})
+        const filterRecord = paymentIntents.data.map(pi => ({
+            id:pi.id,
+            amount:pi.amount,
+            amount_received:pi.amount_received,
+            currency:pi.currency,
+            status:pi.status,
+            payment_method_type:pi.payment_method_types,
+            created_at:pi.created
+        }))
+        const totalLogs = filterRecord.length;
+        res.status(200).json({logs:filterRecord,totalLogs})
 
     } catch (error) {
         next(error)
