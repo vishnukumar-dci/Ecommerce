@@ -62,7 +62,7 @@ export default async function HomePage() {
         {/* Right side full image */}
         <div className="flex-1 relative">
           <img
-            src="/hero2.png"
+            src="/hero.png"
             alt="ShopEZ Deals"
             className="absolute inset-0 w-full h-full object-cover object-center rounded-r-2xl"
           />

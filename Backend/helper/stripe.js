@@ -84,6 +84,50 @@ async function checkout(lineItems,orderId,userId) {
   }
 }
 
-module.exports = { handleWebhook , checkout};
+async function logs() {
+  try {
+    const events = await stripe.events.list({limit:100})
+
+    const filterRecord = events.data.map((ev) => {
+      const obj = ev.data.object;
+
+      // Convert created time (UNIX → IST)
+      const createdAtIST = new Date(obj.created * 1000).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+      });
+
+      // Format currency (Stripe gives lowercase, like "inr")
+      const currency = obj.currency ? obj.currency.toUpperCase() : null;
+
+      // Amount formatting (Stripe stores in smallest unit: paise/cents)
+      const amount =
+        obj.amount || obj.amount_total
+          ? (obj.amount || obj.amount_total) / 100
+          : null;
+
+      return {
+        id: ev.id,
+        type: ev.type,
+        created_at: createdAtIST,
+        object: obj.object, 
+        amount,
+        currency,
+        status: obj.status || obj.payment_status || null,
+        payment_method: obj.payment_method || null,
+        customer: obj.customer || null,
+      };
+    });
+
+    return filterRecord
+  } catch (error) {
+    throw error
+  }
+}
+
+module.exports = { 
+  handleWebhook , 
+  checkout,
+  logs
+}
 
 

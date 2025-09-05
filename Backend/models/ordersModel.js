@@ -110,7 +110,7 @@ async function count() {
 
 async function countById(userId) {
     try {
-        const [row] = await pool.query("SELECT COUNT(*) AS total FROM orders WHERE user_id = ?",[userId])
+        const [row] = await pool.query("SELECT COUNT(*) AS total FROM orders WHERE user_id = ? AND payment_status = 'paid'",[userId])
         return row
     } catch (error) {
         error.message = error.message || 'Database error while getting history of users orders'

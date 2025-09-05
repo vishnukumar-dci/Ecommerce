@@ -146,4 +146,16 @@ async function removeItem(userId,productId) {
     }
 }
 
-module.exports = {create,find,update,deleteFromCart,getById,findProduct,removeFromCart,decrement,clearForUser,hardDeleteForUser,removeItem}
+module.exports = {
+    create,
+    find,
+    update,
+    deleteFromCart,
+    getById,
+    findProduct,
+    removeFromCart,
+    decrement,
+    clearForUser,
+    hardDeleteForUser,
+    removeItem
+}

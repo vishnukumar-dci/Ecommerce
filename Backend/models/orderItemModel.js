@@ -73,4 +73,10 @@ async function updateStatus(orderId,productId,status) {
     }
 }
 
-module.exports = {create,getById,getByOrder,findByOrderId,updateStatus}
+module.exports = {
+    create,
+    getById,
+    getByOrder,
+    findByOrderId,
+    updateStatus
+}

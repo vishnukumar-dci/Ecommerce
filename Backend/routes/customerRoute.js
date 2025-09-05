@@ -11,14 +11,5 @@ router.post('/login',inputValidate.loginUser,validate.validateInputs,customersCo
 
 router.put('/update',validate.validateBearer,upload.single('image'),customersController.update)
 
-router.get('/logout', (req, res) => {
-    try {
-        // If you used sessions, you could destroy here. For JWT-based auth, just reply OK.
-        return res.status(200).json({ message: 'Logged out' })
-    } catch (e) {
-        return res.status(200).json({ message: 'Logged out' })
-    }
-});
-
 module.exports = router
 

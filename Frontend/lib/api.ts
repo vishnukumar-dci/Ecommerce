@@ -104,7 +104,6 @@ export const api = {
   homepageProducts: async () => {
     const res = await apiFetch<any>("/product/homepage", {method: "GET"});
     const list = res?.products || [];
-    console.log(list) 
     return { list, data: list };
   },
 
@@ -151,17 +150,13 @@ export const api = {
     apiFetch<any>("/order/create", { method: "POST", body }),
   updateOrder: (orderId: number, sessionId?: string, status?: string) => 
     apiFetch<any>("/order/update", { method: "PUT", params: { orderId, session_Id: sessionId, status } }),
+  /**Admin order History **/
   orderHistory: async (page:number ,limit :number) => {
     const res = await apiFetch<{history: any[],totalRecords:any}>("/order/history?page="+page+"&limit="+limit)
     console.log('api.orderHistory: response', res)
     return res
   },
-  // customerOrders: async (page:number,limit:number) => {
-  //   const res = await apiFetch<{orders: any[],totalRecords:any}>("/order/userhistory?page="+page+"&limit="+limit)
-  //   console.log('api.customerOrders: response', res)
-  //   return res
-  // },
-
+  /**customer order History **/
   customerOrders:(page:number,limit:number) =>
     apiFetch<{history:any[],totalRecords:any}>("/order/userhistory",{method:"GET" , params:{page,limit}}),
 

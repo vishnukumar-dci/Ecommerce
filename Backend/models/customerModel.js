@@ -22,12 +22,6 @@ async function create(name,email,password) {
 async function findById(id) {
     try {
         const [row] = await pool.query("SELECT * FROM customer WHERE id = ?",[id])
-
-        // if(!row.length){
-        //     const error = new Error('Customer not found')
-        //     error.statusCode = 404
-        //     throw error
-        // }
         return row
     } catch (error) {
         error.message = error.message || 'Database error while Finding customer by Id'
@@ -38,12 +32,6 @@ async function findById(id) {
 async function findByEmail(email) {
     try {
         const [row] = await pool.query("SELECT * FROM customer WHERE email = ?",[email])
-
-        //  if(!row.length){
-        //     const error = new Error('Customer not found')
-        //     error.statusCode = 404
-        //     throw error
-        // }
         return row
     } catch (error) {
         error.message = error.message || 'Database error while Finding customer by Email'
@@ -77,4 +65,10 @@ async function updateWithImage(id,name,imagepath) {
     }
 }
 
-module.exports = {create,update,findByEmail,findById,updateWithImage}
+module.exports = {
+    create,
+    update,
+    findByEmail,
+    findById,
+    updateWithImage
+}

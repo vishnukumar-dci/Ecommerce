@@ -8,7 +8,7 @@ const productRoute = require('./routes/productRoute')
 const cartRoute = require('./routes/cartRoute')
 const errorHandler = require('./middleware/errorHandler')
 const bodyParser = require('body-parser')
-const {handleWebhook} = require('./helper/webhook')
+const {handleWebhook} = require('./helper/stripe')
 
 const app = express()
 const PORT = 8088

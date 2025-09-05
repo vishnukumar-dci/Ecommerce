@@ -1,14 +1,27 @@
 const {body,query} = require('express-validator')
 
 const registerUser = [
-    body('name').notEmpty().trim().withMessage('Name cannot be a empty'),
-    body('email').isEmail().withMessage('Must be a Valid Email'),
-    body('passwords').isLength({min:8}).trim().withMessage('Password must be at least 8 characters')
+    body('name').notEmpty().withMessage('Name cannot be a empty')
+                .isString().withMessage('Name must be a string')
+                .trim()
+                .escape(),
+    body('email').notEmpty().withMessage('Descriptions cannot be a empty')
+                .isEmail().withMessage('must be a valid email')
+                .trim()
+                .escape(),
+    body('passwords').notEmpty().withMessage('Password is required')
+                .isLength({min:8 }).withMessage('Passwords must be at least 8 characters')
+                .trim()
 ]
 
 const loginUser = [
-    body('email').isEmail().withMessage('Must be a Valid Email'),
-    body('passwords').isLength({min:8}).trim().withMessage('Password must be at least 8 characters')
+    body('email').notEmpty().withMessage('Descriptions cannot be a empty')
+                .isEmail().withMessage('must be a valid email')
+                .trim()
+                .escape(),
+    body('passwords').notEmpty().withMessage('Password is required')
+                .isLength({min:8 }).withMessage('Passwords must be at least 8 characters')
+                .trim()
 ]
 
 const createProduct = [
@@ -25,9 +38,16 @@ const createProduct = [
 ]
 
 const updateProduct = [
-    body('name').notEmpty().trim().withMessage('Name cannot be a empty'),
-    body('description').notEmpty().trim().withMessage('Descriptions cannot be a empty'),
-    body('amount').isInt({min:1}).withMessage('Price must be greater than 1')
+    body('name').notEmpty().withMessage('Name cannot be a empty')
+                .isString().withMessage('Name must be a string')
+                .trim()
+                .escape(),
+    body('description').notEmpty().withMessage('Descriptions cannot be a empty')
+                .isString().withMessage('Name must be a string')
+                .trim()
+                .escape(),
+    body('amount').notEmpty().withMessage('Price is required')
+                .isInt({min:10}).withMessage('Price must be greater than 10')
 ]
 
 const getCartProduct = [
@@ -49,4 +69,14 @@ const updateOrder = [
     query('orderId').isInt({min:0}).withMessage('Order id must be a integer')
 ]
 
-module.exports = {registerUser,loginUser,createOrder,createProduct,updateOrder,updateProduct,getCartProduct,createOrder,Cart}
+module.exports = {
+    registerUser,
+    loginUser,
+    createOrder,
+    createProduct,
+    updateOrder,
+    updateProduct,
+    getCartProduct,
+    createOrder,
+    Cart
+}

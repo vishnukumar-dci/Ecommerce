@@ -54,4 +54,9 @@ function validateTokenOptional(req, res, next) {
     }
 }
 
-module.exports = { validateBearer, isAdmin, validateInputs ,validateTokenOptional};
+module.exports = { 
+    validateBearer, 
+    isAdmin, 
+    validateInputs ,
+    validateTokenOptional
+};

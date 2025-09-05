@@ -73,4 +73,10 @@ async function decrementItem(req,res,next) {
     }
 }
 
-module.exports = {addTocart,deleteCartItems,getCartItems,removeCartItem,decrementItem}
+module.exports = {
+    addTocart,
+    deleteCartItems,
+    getCartItems,
+    removeCartItem,
+    decrementItem
+}

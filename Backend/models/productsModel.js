@@ -18,7 +18,7 @@ async function create(name,description,price,imagePath) {
     }
 }
 
-async function getAllById(userId) {
+async function getAllById(userId,limit,offset) {
     try {
         const [rows] = await pool.query(
             `SELECT 
@@ -31,20 +31,9 @@ async function getAllById(userId) {
                     WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS in_cart
              FROM products p 
              LEFT JOIN cart c 
-             ON c.product_id = p.id AND c.user_id = ?`
-        ,[userId])
-        return rows
-    } catch (error) {
-        error.message = error.message || 'Database error while getting products'
-        throw error
-    }
-}
-
-async function getAll() {
-    try {
-        const [rows] = await pool.query(
-            `SELECT * FROM products`
-        )
+             ON c.product_id = p.id AND c.user_id = ?
+             ORDER BY p.id LIMIT ? OFFSET ?`
+        ,[userId,limit,offset])
         return rows
     } catch (error) {
         error.message = error.message || 'Database error while getting products'
@@ -110,6 +99,7 @@ async function deleteById(id) {
         }
         return row;
     } catch (error) {
+        error.message = error.message || 'Database error while Updating product with image'
         throw error
     }
 }
@@ -119,8 +109,28 @@ async function imageRetreive() {
         const [rows] = await pool.query("SELECT * FROM products order by id desc limit 8")
         return rows;
     } catch (error) {
+        error.message = error.message || 'Database error while Updating product with image'
         throw error
     }
 }
 
-module.exports = {create,getAll,getById,update,updateWithImage,deleteById,imageRetreive,getAllById}
+async function count(params) {
+    try {
+        const [row] = await pool.query(`SELECT COUNT(*) as total FROM products`)
+        return row
+    } catch (error) {
+        error.message = error.message || 'Database error while Updating product with image'
+        throw error
+    }
+}
+
+module.exports = {
+    create,
+    getById,
+    update,
+    updateWithImage,
+    deleteById,
+    imageRetreive,
+    getAllById,
+    count
+}

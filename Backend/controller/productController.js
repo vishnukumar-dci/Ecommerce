@@ -24,9 +24,19 @@ async function createProduct(req,res,next) {
 async function getItems(req,res,next) {
 
     const userId = req.user?.id || null
+    const page = parseInt(req.query.page) || 1
+    const limit = parseInt(req.query.limt) || 10
+    const offset = (page - 1) * 10
     try {
-        const result = await productModel.getAllById(userId)
-        res.status(200).json({list:result})
+        const result = await productModel.getAllById(userId,limit,offset)
+
+        const [{total}] = await productModel.count()
+
+        res.status(200).json({
+            list:result,
+            total,
+            hasMore:offset + result.length < total
+        })
     } catch (error) {
         next(error)
     }
@@ -97,4 +107,11 @@ async function HomePageImage(req,res,next) {
     }
 }
 
-module.exports = {createProduct,getItems,getProduct,updateById,deleteProduct,HomePageImage}
+module.exports = {
+    createProduct,
+    getItems,
+    getProduct,
+    updateById,
+    deleteProduct,
+    HomePageImage
+}
