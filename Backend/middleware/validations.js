@@ -12,9 +12,16 @@ const loginUser = [
 ]
 
 const createProduct = [
-    body('name').notEmpty().trim().withMessage('Name cannot be a empty'),
-    body('description').notEmpty().trim().withMessage('Descriptions cannot be a empty'),
-    body('amount').isInt({min:10}).withMessage('Price must be greater than 10')
+    body('name').notEmpty().withMessage('Name cannot be a empty')
+                .isString().withMessage('Name must be a string')
+                .trim()
+                .escape(),
+    body('description').notEmpty().withMessage('Descriptions cannot be a empty')
+                .isString().withMessage('Name must be a string')
+                .trim()
+                .escape(),
+    body('amount').notEmpty().withMessage('Price is required')
+                .isInt({min:10}).withMessage('Price must be greater than 10')
 ]
 
 const updateProduct = [
@@ -39,7 +46,7 @@ const Cart = [
 ]
 
 const updateOrder = [
-    query('orderId').isInt({min:0}).withMessage('Order id must be a integer'),
+    query('orderId').isInt({min:0}).withMessage('Order id must be a integer')
 ]
 
 module.exports = {registerUser,loginUser,createOrder,createProduct,updateOrder,updateProduct,getCartProduct,createOrder,Cart}

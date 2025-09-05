@@ -4,7 +4,7 @@ import Navbar from "@/components/layout/Navbar";
 import Footer from "@/components/layout/Footer";
 
 export const metadata: Metadata = {
-  title: "ShopEZ — Next.js E-commerce",
+  title: "ShopEZ ",
   description: "Flipkart/Amazon-style e-commerce built with Next.js App Router",
 };
 

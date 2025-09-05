@@ -7,6 +7,7 @@ type CartState = {
   items: CartItem[];
   add: (item: CartItem) => void;
   remove: (productId: number) => void;
+  removeMany:(productIds:number[]) => void;
   updateQty: (productId: number, qty: number) => void;
   clear: () => void;
   total: () => number;
@@ -25,6 +26,12 @@ export const useCart = create<CartState>()(persist(
       set({ items });
     },
     remove: (productId) => set({ items: get().items.filter(i => i.product_id !== productId) }),
+    removeMany: (productIds) => // ✅ remove only purchased items
+        set({
+          items: get().items.filter(
+            (i) => !productIds.includes(i.product_id)
+          ),
+        }),
     updateQty: (productId, qty) => set({ items: get().items.map(i => i.product_id === productId ? { ...i, qty } : i) }),
     clear: () => set({ items: [] }),
     total: () => get().items.reduce((sum, i) => sum + (Number(i.amount) * i.qty), 0),

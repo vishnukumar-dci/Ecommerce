@@ -42,24 +42,25 @@ export default function ProductActions({ product }: { product: any }) {
     }
   };
 
-  const handleBuyNow = async () => {
-    if (!ensureAuth()) return;
-    try {
-      await api.cartAdd(Number(userId), Number(product.id));
-      const cartItem: CartItem = {
-        id: 0,
-        product_id: product.id,
-        qty: 1,
-        image_path: product.image_path,
-        product_name: product.product_name,
-        amount: product.amount,
-      };
-      add(cartItem);
-      window.location.href = "/checkout";
-    } catch (e) {
-      console.error("Failed to add to cart:", e);
-    }
-  };
+const handleBuyNow = async () => {
+  if (!ensureAuth()) return;
+  const productId = product.id
+  const qty = 1
+  try {
+    const res = await api.createSingle({productId,qty});
+      if (res && res.url) {
+        // redirect to Stripe checkout
+        window.location.href = res.url;
+      } else if (res && res.sessionUrl) {
+        window.location.href = res.sessionUrl;
+      } else {
+        console.error('Unexpected createOrder response', res);
+      }
+  } catch (e) {
+    console.error("Buy Now failed:", e);
+  }
+};
+
 
   if(isInCart){
     return (

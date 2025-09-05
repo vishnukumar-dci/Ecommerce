@@ -4,12 +4,14 @@ const orderController = require('../controller/orderController')
 const validate = require('../middleware/validateSessionAndToken')
 const inputValidate = require('../middleware/validations')
 
-router.post('/create',validate.validateBearer,orderController.createOrder)
+router.post('/create',validate.validateBearer,orderController.Paynow)
+
+router.post('/buynow',validate.validateBearer,orderController.Buynow)
 
 // Stripe will post to this endpoint; do not require bearer validation
-router.post('/webhook', express.raw({ type: 'application/json' }), orderController.webhookHandler)
+// router.post('/webhook', express.raw({ type: 'application/json' }), orderController.webhookHandler)
 
-router.get('/payment-status',inputValidate.updateOrder,validate.validateInputs,orderController.updateOrder)
+router.get('/payment-status',validate.validateInputs,orderController.updateOrder)
 
 router.get('/userhistory',validate.validateBearer,orderController.itemHistory)
 

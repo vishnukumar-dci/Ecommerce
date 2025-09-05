@@ -6,7 +6,7 @@ const logger = require('../helper/logger')
 const Stripe = require('stripe')
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY)
 
-async function createOrder(req,res,next) {
+async function Paynow(req,res,next) {
 
     const{productIds,qtys} = req.body
     
@@ -14,11 +14,14 @@ async function createOrder(req,res,next) {
     try {
 
         const result = await orderModel.create(userId)
-
+        const cartItems = await cartModel.find(userId)
         const products = []
 
         const orderId = result.insertId;
-        console.log(orderId)
+
+         for (const item of cartItems) {
+            await orderItemModel.create(orderId, item.product_id, item.qty, "pending");
+        }
       
         for(let i = 0; i < productIds.length;i++){
             const productId = productIds[i]
@@ -49,8 +52,8 @@ async function createOrder(req,res,next) {
             allow_promotion_codes: true,
             // include orderId and userId in metadata so webhook can verify and process the order
             metadata: { orderId: String(orderId), userId: String(userId) },
-            success_url: `http://localhost:8088/order/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
-            cancel_url: `http://localhost:8088/order/payment-status?status=declined&orderId=${orderId}`
+            success_url: `http://localhost:3000/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
+            cancel_url: `http://localhost:3000/payment-status?status=declined&orderId=${orderId}`
         })
 
     logger.info(`Checkout session and order created successfully for id ${userId}`)
@@ -60,99 +63,154 @@ async function createOrder(req,res,next) {
     }
 }
 
-async function updateOrder(req,res,next) {
+async function Buynow(req, res, next) {
+  const { productId, qty } = req.body;
+  const userId = req.user.id;
 
-    let status = "failed"
-    let amount = 0
-    const orderId = req.query.orderId
-    try {
-        if (req.query.session_Id) {
+  try {
+    const order = await orderModel.create(userId);
+    const orderId = order.insertId;
 
-            const session = await stripe.checkout.sessions.retrieve(req.query.session_Id);
-            const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent)
-            amount = Number(paymentIntent.amount)/100;
-            status = session.payment_status === "paid" ? "paid" : "failed";
+    const product = await productModel.getById(productId);
+    if (!product) throw new Error("Product not found");
 
-        } else if (req.query.status) {
-            status = req.query.status
-        }
+    await orderItemModel.create(orderId, productId, qty, "pending");
 
-        await orderModel.update(amount,status,orderId)
+    const session = await stripe.checkout.sessions.create({
+      payment_method_types: ["card"],
+      mode: "payment",
+      line_items: [
+        {
+          price_data: {
+            currency: "INR",
+            product_data: { name: product[0].product_name },
+            unit_amount: Number(product[0].amount) * 100,
+          },
+          quantity: qty,
+        },
+      ],
+      allow_promotion_codes:true,
+      metadata: { orderId: String(orderId), userId: String(userId) },
+      success_url: `http://localhost:3000/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
+      cancel_url: `http://localhost:3000/payment-status?status=declined&orderId=${orderId}`,
+    });
 
-        const orderRows = await orderModel.getById(orderId)
-        const userId = orderRows && orderRows[0] ? orderRows[0].user_id : null
-
-        if (userId) {
-            const cartItems = await cartModel.find(userId)
-            console.log(`updateOrder: found ${cartItems.length} cart items for user ${userId}`);
-            for(const item of cartItems){
-                console.log(`updateOrder: creating order_item for order ${orderId}, product ${item.product_id}, qty ${item.qty}`);
-                await orderItemModel.create(orderId,item.product_id,item.qty,amount)
-            }
-            if (status === 'paid') {
-                const del = await cartModel.hardDeleteForUser(userId)
-                console.log(`updateOrder: hardDeleteForUser result for user ${userId}:`, del);
-            }
-        }
-
-        res.redirect(302, 'http://localhost:3000/orders')
-    } catch (error) {
-        next(error)
-    }
+    res.json({ url: session.url });
+  } catch (err) {
+    next(err);
+  }
 }
 
-async function webhookHandler(req, res, next) {
+async function updateOrder(req, res, next) {
+  let status = "failed";
+  let amount = 0;
+  const orderId = req.query.orderId;
+
+  try {
+    // 1. Verify with Stripe
+    if (req.query.session_Id) {
+      const session = await stripe.checkout.sessions.retrieve(req.query.session_Id);
+      const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+
+      amount = Number(paymentIntent.amount) / 100;
+      status = session.payment_status === "paid" ? "paid" : "failed";
+    } else if (req.query.status) {
+      status = req.query.status;
+    }
+
+    // 2. Update order row
+    await orderModel.update(amount, status, orderId);
+
+    // 3. Get order & items
+    const orderRows = await orderModel.getById(orderId);
+    // if (!orderRows?.length) {
+    //   return res.status(404).json({ success: false, message: "Order not found" });
+    // }
+
+    const userId = orderRows[0].user_id || null;
+
+    const orderItems = await orderItemModel.findByOrderId(orderId);
+    console.log(orderItems)
+
+    if (status === "paid") {
+      // 4. Mark order_items as paid
+      for (const item of orderItems) {
+        await orderItemModel.updateStatus(orderId, item.product_id, "paid");
+        // 5. Remove only purchased items from cart
+        await cartModel.removeItem(userId, item.product_id);
+      }
+    } else {
+      // If failed, mark order_items failed but keep cart unchanged
+      for (const item of orderItems) {
+        await orderItemModel.updateStatus(orderId, item.product_id, "failed");
+      }
+    }
+    logger.info(`Order details updated for orderId = ${orderId}`)
+    res.json({
+      success: true,
+      status,
+      orderId,
+      amount,
+      items: orderItems,
+    });
+  } catch (error) {
+    console.error("updateOrder error:", error);
+    next(error);
+  }
+}
+
+// async function webhookHandler(req, res, next) {
     
-    const sig = req.headers['stripe-signature'];
-    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    let event;
-    try {
-        // req.body will be a Buffer because the route uses express.raw()
-        event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
-    } catch (err) {
-        console.error('⚠️  Webhook signature verification failed.', err.message);
-        return res.status(400).send(`Webhook Error: ${err.message}`);
-    }
+//     const sig = req.headers['stripe-signature'];
+//     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+//     let event;
+//     try {
+//         // req.body will be a Buffer because the route uses express.raw()
+//         event = stripe.webhooks.constructEvent(req.body, sig, webhookSecret);
+//     } catch (err) {
+//         console.error('⚠️  Webhook signature verification failed.', err.message);
+//         return res.status(400).send(`Webhook Error: ${err.message}`);
+//     }
 
-    try {
-        if (event.type === 'checkout.session.completed') {
-            const session = event.data.object;
-            console.log('Stripe webhook: checkout.session.completed received for session id=', session.id);
-            const metadata = session.metadata || {};
-            const orderId = metadata.orderId;
-            const userId = metadata.userId ? Number(metadata.userId) : null;
+//     try {
+//         if (event.type === 'checkout.session.completed') {
+//             const session = event.data.object;
+//             console.log('Stripe webhook: checkout.session.completed received for session id=', session.id);
+//             const metadata = session.metadata || {};
+//             const orderId = metadata.orderId;
+//             const userId = metadata.userId ? Number(metadata.userId) : null;
 
-            console.log('Webhook metadata:', metadata);
+//             console.log('Webhook metadata:', metadata);
 
-            // double-check payment status
-            const paymentStatus = session.payment_status;
-            if (paymentStatus === 'paid' && orderId) {
-                // retrieve payment intent to get amount
-                const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
-                const amount = Number(paymentIntent.amount) / 100;
-                console.log(`Webhook: marking order ${orderId} as paid, amount=${amount}`);
-                // update order record
-                await orderModel.update(amount, 'paid', orderId);
+//             // double-check payment status
+//             const paymentStatus = session.payment_status;
+//             if (paymentStatus === 'paid' && orderId) {
+//                 // retrieve payment intent to get amount
+//                 const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+//                 const amount = Number(paymentIntent.amount) / 100;
+//                 console.log(`Webhook: marking order ${orderId} as paid, amount=${amount}`);
+//                 // update order record
+//                 await orderModel.update(amount, 'paid', orderId);
 
-                if (userId) {
-                    const cartItems = await cartModel.find(userId);
-                    console.log(`Webhook: found ${cartItems.length} cart items for user ${userId}`);
-                    for (const item of cartItems) {
-                        console.log(`Webhook: creating order_item for order ${orderId}, product ${item.product_id}, qty ${item.qty}`);
-                        await orderItemModel.create(orderId, item.product_id, item.qty, amount);
-                    }
-                    const del = await cartModel.hardDeleteForUser(userId);
-                    console.log(`Webhook: hardDeleteForUser result for user ${userId}:`, del);
-                } else {
-                    console.log('Webhook: userId is missing in metadata; cannot clear cart');
-                }
-            }
-        }
-        res.json({ received: true });
-    } catch (err) {
-        next(err);
-    }
-}
+//                 if (userId) {
+//                     const cartItems = await cartModel.find(userId);
+//                     console.log(`Webhook: found ${cartItems.length} cart items for user ${userId}`);
+//                     for (const item of cartItems) {
+//                         console.log(`Webhook: creating order_item for order ${orderId}, product ${item.product_id}, qty ${item.qty}`);
+//                         await orderItemModel.create(orderId, item.product_id, item.qty, amount);
+//                     }
+//                     const del = await cartModel.hardDeleteForUser(userId);
+//                     console.log(`Webhook: hardDeleteForUser result for user ${userId}:`, del);
+//                 } else {
+//                     console.log('Webhook: userId is missing in metadata; cannot clear cart');
+//                 }
+//             }
+//         }
+//         res.json({ received: true });
+//     } catch (err) {
+//         next(err);
+//     }
+// }
 
 async function itemHistory(req,res,next) {
     
@@ -197,28 +255,54 @@ async function orderHistory(req,res,next) {
     }
 }
 
-async function stripeLogs(req,res,next) {
-    try {
-        const paymentIntents = await stripe.paymentIntents.list({limit:60})
+async function stripeLogs(req, res, next) {
+  try {
+    const events = await stripe.events.list({ limit: 100 });
 
-        //const filterRecord = paymentIntents.data.filter(pi => pi.status !== 'succeeded')
-        // res.json({filterRecord})
-        
-        const filterRecord = paymentIntents.data.map(pi => ({
-            id:pi.id,
-            amount:pi.amount,
-            amount_received:pi.amount_received,
-            currency:pi.currency,
-            status:pi.status,
-            payment_method_type:pi.payment_method_types,
-            created_at:pi.created
-        }))
-        const totalLogs = filterRecord.length;
-        res.status(200).json({logs:filterRecord,totalLogs})
+    const filterRecord = events.data.map((ev) => {
+      const obj = ev.data.object;
 
-    } catch (error) {
-        next(error)
-    }
+      // Convert created time (UNIX → IST)
+      const createdAtIST = new Date(obj.created * 1000).toLocaleString("en-IN", {
+        timeZone: "Asia/Kolkata",
+      });
+
+      // Format currency (Stripe gives lowercase, like "inr")
+      const currency = obj.currency ? obj.currency.toUpperCase() : null;
+
+      // Amount formatting (Stripe stores in smallest unit: paise/cents)
+      const amount =
+        obj.amount || obj.amount_total
+          ? (obj.amount || obj.amount_total) / 100
+          : null;
+
+      return {
+        id: ev.id,
+        type: ev.type,
+        created_at: createdAtIST,
+        object: obj.object, // e.g. payment_intent / checkout.session
+        amount,
+        currency,
+        status: obj.status || obj.payment_status || null,
+        payment_method: obj.payment_method || null,
+        customer: obj.customer || null,
+      };
+    });
+
+    const totalLogs = filterRecord.length;
+
+    logger.info(`Stripe logs retrieve sucessfull for Admin`)
+    res.status(200).json({
+      success: true,
+      totalLogs,
+      logs: filterRecord,
+    });
+  } catch (error) {
+    console.error("❌ Error fetching Stripe logs:", error);
+    next(error);
+  }
 }
 
-module.exports = {createOrder,updateOrder,itemHistory,orderHistory, webhookHandler,stripeLogs}
+
+
+module.exports = {Paynow,updateOrder,itemHistory,orderHistory,stripeLogs,Buynow}

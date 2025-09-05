@@ -28,7 +28,6 @@ async function findById(id) {
         //     error.statusCode = 404
         //     throw error
         // }
-        console.log(row)
         return row
     } catch (error) {
         error.message = error.message || 'Database error while Finding customer by Id'
@@ -53,11 +52,9 @@ async function findByEmail(email) {
 }
 
 async function update(id,name) {
-    console.log(id)
     try {
         const [row] = await pool.query("UPDATE customer SET name = ? WHERE id = ?",[name,id])
-        console.log(row)
-
+   
         if(!row.affectedRows){
             const error = new Error("customer not found for update")
             error.statusCode = 404

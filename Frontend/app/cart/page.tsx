@@ -50,6 +50,22 @@ export default function CartPage() {
     }
   }
 
+  const handleBuyNow = async (productId:number,qty:number) => {
+  try {
+    const res = await api.createSingle({productId,qty});
+      if (res && res.url) {
+        // redirect to Stripe checkout
+        window.location.href = res.url;
+      } else if (res && res.sessionUrl) {
+        window.location.href = res.sessionUrl;
+      } else {
+        console.error('Unexpected createOrder response', res);
+      }
+  } catch (e) {
+    console.error("Buy Now failed:", e);
+  }
+};
+
   return (
     <div className="min-h-full flex items-center justify-center py-12 bg-slate-50">
       <div className="w-full max-w-6xl px-6 space-y-6">
@@ -82,6 +98,13 @@ export default function CartPage() {
                         <span className="px-3">{qty}</span>
                         <Button size="sm" onClick={() => inc(pid, qty)}>+</Button>
                         <Button variant="ghost" onClick={() => del(pid)}>Remove</Button>
+
+                         <Button
+                      className="ml-auto"
+                      onClick={() => handleBuyNow(pid, qty)}
+                    >
+                      Buy Now
+                    </Button>
                       </div>
                     </div>
                   </div>

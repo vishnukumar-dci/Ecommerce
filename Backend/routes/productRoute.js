@@ -10,9 +10,9 @@ router.get('/list',validate.validateTokenOptional,productController.getItems)
 router.get('/cartitem',inputValidate.getCartProduct,validate.validateInputs,validate.validateBearer,productController.getProduct)
 
 //admin access only
-router.post('/create',validate.validateBearer,validate.isAdmin ,upload.single('image'), productController.createProduct)
+router.post('/create',upload.single('image'),inputValidate.createProduct,validate.validateInputs,validate.validateBearer,validate.isAdmin ,productController.createProduct)
 
-router.put('/update',validate.validateBearer,validate.isAdmin,upload.single('image'), productController.updateById)
+router.put('/update',upload.single('image'),inputValidate.updateProduct,validate.validateInputs,validate.validateBearer,validate.isAdmin,productController.updateById)
 
 router.delete('/delete',validate.validateBearer,validate.isAdmin,productController.deleteProduct)
 

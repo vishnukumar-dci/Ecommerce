@@ -30,6 +30,7 @@ export async function apiFetch<T>(
 ): Promise<T> {
   const url = buildUrl(path, params);
 
+  // Extract token from cookie
   let token: string | undefined;
   if (typeof window !== "undefined") {
     try {
@@ -42,14 +43,14 @@ export async function apiFetch<T>(
     } catch {}
   }
 
-  console.log(`apiFetch: ${method} ${url} ${token ? '(with token)' : '(no token)'}`)
+  console.log(`apiFetch: ${method} ${url} ${token ? '(with token)' : '(no token)'}`);
 
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
-  const finalHeaders: Record<string, string> = {
-    ...(isFormData ? {} : { "Content-Type": "application/json" }),
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    ...(headers || {}),
-  };
+
+  const finalHeaders: Record<string, string> = {};
+  if (!isFormData) finalHeaders["Content-Type"] = "application/json";
+  if (token) finalHeaders["Authorization"] = `Bearer ${token}`;
+  if (headers && !isFormData) Object.assign(finalHeaders, headers);
 
   const res = await fetch(url, {
     method,
@@ -60,14 +61,15 @@ export async function apiFetch<T>(
   });
 
   if (!res.ok) {
-  let msg = `Request failed ${res.status}`;
-  try {
-    const data = await res.json();
-    console.log("apiFetch error response:", data);
-    msg = typeof data?.message === "string" ? data.message : JSON.stringify(data);
-  } catch {}
-  throw new Error(msg);
-}
+    let msg = `Request failed ${res.status}`;
+    try {
+      const data = await res.json();
+      console.log("apiFetch error response:", data);
+      msg = typeof data?.message === "string" ? data.message : JSON.stringify(data);
+    } catch {}
+    throw new Error(msg);
+  }
+
   return (await res.json()) as T;
 }
 
@@ -107,13 +109,16 @@ export const api = {
   },
 
   addProduct: (body: { name: string; description: string; amount: number; image?: File }) => {
-    const form = new FormData();
-    form.append("name", body.name);
-    form.append("description", body.description);
-    form.append("amount", String(body.amount));
-    if (body.image) form.append("image", body.image);
-    return apiFetch<any>("/product/create", { method: "POST", body: form, headers: {} });
-  },
+  const form = new FormData();
+  form.append("name", body.name);
+  form.append("description", body.description);
+  form.append("amount", String(body.amount));
+  if (body.image) form.append("image", body.image); // File object
+
+  console.log("Sending form data:", [...form.entries()]); // debug
+
+  return apiFetch<any>("/product/create", { method: "POST", body: form });
+},
   updateProduct: (productId: number, body: { name?: string; description?: string; amount?: number; image?: File }) => {
     const form = new FormData();
     if (body.name !== undefined) form.append("name", String(body.name));
@@ -139,6 +144,8 @@ export const api = {
   /** Orders **/
   createOrder: (body: { productIds: number[]; qtys: number[] }) => 
     apiFetch<any>("/order/create", { method: "POST", body }),
+  createSingle:(body:{productId:number; qty:number}) =>
+    apiFetch<any>("order/buynow",{method:"POST",body}),
   // Explicit helper to create a Stripe checkout session
   createCheckout: (body: { productIds: number[]; qtys: number[] }) =>
     apiFetch<any>("/order/create", { method: "POST", body }),

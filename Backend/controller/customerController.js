@@ -75,7 +75,7 @@ async function update(req,res,next) {
     try {
         const existingCustomer = await customerModel.findById(id)
 
-        const imagePath = req.file ? `/uploads/${req.file.filename}`:null
+        const imagePath = req.file ? `/uploads/profile/${req.file.filename}`:null
         
         if(existingCustomer.length === 0){
             logger.error(`Customer Not Found for email ${id}`)

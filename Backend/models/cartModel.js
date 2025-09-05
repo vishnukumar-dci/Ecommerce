@@ -19,8 +19,7 @@ async function create(userId,productId) {
 
 async function find(userId) {
     try {
-        // Return ACTIVE items
-        const [row] = await pool.query("SELECT * FROM cart WHERE user_id = ? AND is_deleted = 0",[userId])
+        const [row] = await pool.query("SELECT * FROM cart WHERE user_id = ? AND is_deleted = false",[userId])
         return row
     } catch (error) {
         error.message = error.message || 'Database error while Finding product by user'
@@ -138,4 +137,13 @@ async function hardDeleteForUser(userId) {
     }
 }
 
-module.exports = {create,find,update,deleteFromCart,getById,findProduct,removeFromCart,decrement,clearForUser,hardDeleteForUser}
+async function removeItem(userId,productId) {
+    try {
+        const [row] = await pool.query(`DELETE FROM cart WHERE user_id = ? AND product_id = ?`,[userId,productId])
+    } catch (error) {
+        error.message = error.message || 'Database Error while hard-deleting cart for user'
+        throw error
+    }
+}
+
+module.exports = {create,find,update,deleteFromCart,getById,findProduct,removeFromCart,decrement,clearForUser,hardDeleteForUser,removeItem}

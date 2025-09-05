@@ -90,11 +90,10 @@ export default function AdminLogsPage() {
                 <tr className="text-left">
                   <th className="p-2">#</th>
                   <th className="p-2">Id</th>
+                  <th className="p-2">Event Type</th>
                   <th className="p-2">Amount</th>
-                  <th className="p-2">Amount-Received</th>
                   <th className="p-2">Currency</th>
                   <th className="p-2">Status</th>
-                  <th className="p-2">Payment Method</th>
                   <th className="p-2">Created</th>
                 </tr>
               </thead>
@@ -103,11 +102,10 @@ export default function AdminLogsPage() {
                   <tr key={o.id} className="border-b">
                     <td className="p-3">{(page - 1) * limit + idx + 1}</td>
                     <td className="p-3">{o.id}</td>
+                    <td className="p-3">{o.type}</td>
                     <td className="p-3">{o.amount}</td>
-                    <td className="p-3">{o.amount_received}</td>
                     <td className="p-3">{o.currency}</td>
                     <td className="p-3">{o.status}</td>
-                    <td className="p-3">{o.payment_method_type}</td>
                     <td className="p-3">{o.created_at}</td>
                   </tr>
                 ))}
