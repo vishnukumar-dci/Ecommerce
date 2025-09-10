@@ -118,6 +118,15 @@ async function countById(userId) {
     }
 }
 
+async function updateStatus(orderId) {
+    try {
+        const [row] = await pool.query("UPDATE orders SET payment_status = ? where id = ?",["cancelled",orderId])
+        return row
+    } catch (error) {
+        throw error
+    }
+}
+
 module.exports = {
     create,
     update,
@@ -125,5 +134,6 @@ module.exports = {
     userhistory,
     history,
     count,
-    countById
+    countById,
+    updateStatus
 }

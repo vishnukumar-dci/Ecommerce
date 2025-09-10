@@ -148,8 +148,15 @@ export const api = {
   // Explicit helper to create a Stripe checkout session
   createCheckout: (body: { productIds: number[]; qtys: number[] }) =>
     apiFetch<any>("/order/create", { method: "POST", body }),
-  updateOrder: (orderId: number, sessionId?: string, status?: string) => 
-    apiFetch<any>("/order/update", { method: "PUT", params: { orderId, session_Id: sessionId, status } }),
+  updateOrder: (orderId: number) => {
+    const res = apiFetch<{items:any[],payment_status:any,amount:any,created_at:any}>("/order/status", { method: "GET", params: { orderId} })
+    console.log(res)
+    return res
+  },
+
+  updateStatus:(orderId:number) => {
+    apiFetch<any>("/order/update",{method:"PUT",params:{orderId}})
+  },
   /**Admin order History **/
   orderHistory: async (page:number ,limit :number) => {
     const res = await apiFetch<{history: any[],totalRecords:any}>("/order/history?page="+page+"&limit="+limit)

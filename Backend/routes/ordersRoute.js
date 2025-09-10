@@ -8,7 +8,7 @@ router.post('/create',validate.validateBearer,orderController.Paynow)
 
 router.post('/buynow',validate.validateBearer,orderController.Buynow)
 
-router.get('/payment-status',validate.validateInputs,orderController.updateOrder)
+router.get('/status',validate.validateBearer,orderController.paymentStatus)
 
 router.get('/userhistory',validate.validateBearer,orderController.itemHistory)
 

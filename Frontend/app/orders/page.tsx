@@ -85,7 +85,7 @@ export default function OrdersPage() {
           >
             <div className="flex justify-between items-center mb-2">
               <div>
-                <p className="font-semibold">Order #{o.id}</p>
+                {/* <p className="font-semibold">Order #{o.id}</p> */}
                 <p className="text-sm text-gray-500">
                   {new Date(o.created_at).toLocaleString()}
                 </p>
@@ -100,7 +100,6 @@ export default function OrdersPage() {
                 {o.payment_status}
               </span>
             </div>
-
             <div className="space-y-2">
               {o.items.map((item: any, idx: number) => (
                 <div key={idx} className="flex items-center gap-3">

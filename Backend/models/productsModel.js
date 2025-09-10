@@ -18,7 +18,7 @@ async function create(name,description,price,imagePath) {
     }
 }
 
-async function getAllById(userId,limit,offset) {
+async function getAllById(userId) {
     try {
         const [rows] = await pool.query(
             `SELECT 
@@ -31,9 +31,8 @@ async function getAllById(userId,limit,offset) {
                     WHEN c.id IS NOT NULL THEN 1 ELSE 0 END AS in_cart
              FROM products p 
              LEFT JOIN cart c 
-             ON c.product_id = p.id AND c.user_id = ?
-             ORDER BY p.id LIMIT ? OFFSET ?`
-        ,[userId,limit,offset])
+             ON c.product_id = p.id AND c.user_id = ?`
+        ,[userId])
         return rows
     } catch (error) {
         error.message = error.message || 'Database error while getting products'
@@ -124,6 +123,15 @@ async function count(params) {
     }
 }
 
+// async function getAll(params) {
+//     try {
+//         const [rows] = await pool.query(`SELECT * FROM products`)
+//     } catch (error) {
+//         error.message = error.message || 'Database error while Updating product with image'
+//         throw error
+//     }
+// }
+
 module.exports = {
     create,
     getById,
@@ -132,5 +140,6 @@ module.exports = {
     deleteById,
     imageRetreive,
     getAllById,
-    count
+    count,
+   
 }

@@ -46,7 +46,7 @@ async function Paynow(req,res,next) {
 
     const redirect_url = await payment.checkout(lineItems, orderId, userId)
 
-    logger.info(`Checkout session and order created successfully for id ${userId}`)
+    logger.info(`Checkout session and order created successfully for customer_id:${userId}`)
 
     return res.status(200).json({url:redirect_url})
     } catch (error) {
@@ -86,59 +86,31 @@ async function Buynow(req, res, next) {
 }
 
 async function updateOrder(req, res, next) {
-  let status = "failed";
-  let amount = 0;
-  const orderId = req.query.orderId;
-
   try {
-    // 1. Verify with Stripe
-    if (req.query.session_Id) {
-      const session = await stripe.checkout.sessions.retrieve(req.query.session_Id);
-      const paymentIntent = await stripe.paymentIntents.retrieve(session.payment_intent);
+    const {orderId} = req.query
 
-      amount = Number(paymentIntent.amount) / 100;
-      status = session.payment_status === "paid" ? "paid" : "failed";
-    } else if (req.query.status) {
-      status = req.query.status;
-    }
-
-    // 2. Update order row
-    await orderModel.update(amount, status, orderId);
-
-    // 3. Get order & items
-    const orderRows = await orderModel.getById(orderId);
-    // if (!orderRows?.length) {
-    //   return res.status(404).json({ success: false, message: "Order not found" });
-    // }
-
-    const userId = orderRows[0].user_id || null;
-
-    const orderItems = await orderItemModel.findByOrderId(orderId);
-
-    if (status === "paid") {
-      // 4. Mark order_items as paid
-      for (const item of orderItems) {
-        await orderItemModel.updateStatus(orderId, item.product_id, "paid");
-        // 5. Remove only purchased items from cart
-        await cartModel.removeItem(userId, item.product_id);
-      }
-    } else {
-      // If failed, mark order_items failed but keep cart unchanged
-      for (const item of orderItems) {
-        await orderItemModel.updateStatus(orderId, item.product_id, "failed");
-      }
-    }
-    logger.info(`Order details updated for orderId = ${orderId}`)
-    res.json({
-      success: true,
-      status,
-      orderId,
-      amount,
-      items: orderItems,
-    });
+    await orderModel.updateStatus(orderId)
+    
   } catch (error) {
     console.error("updateOrder error:", error);
     next(error);
+  }
+}
+
+async function paymentStatus(req,res,next) {
+  try {
+    const {orderId} = req.query;
+
+    const order = await orderModel.getById(orderId)
+
+    // const items = await orderItemModel.findByOrderId(orderId)
+
+    res.status(200).json({
+      ...order[0]
+    })
+    
+  } catch (error) {
+      next(error)
   }
 }
 
@@ -210,5 +182,6 @@ module.exports = {
   itemHistory,
   orderHistory,
   stripeLogs,
-  Buynow
+  Buynow,
+  paymentStatus,
 }

@@ -15,6 +15,7 @@ export default function ProductActions({ product }: { product: any }) {
   const isInCart = items.some((i) => i.product_id === product.id)
 
   const ensureAuth = () => {
+    console.log(token,userId)
     if (!token || !userId) {
       const redirect = typeof window !== "undefined" ? window.location.pathname : "/products";
       router.push(`/login?redirect=${encodeURIComponent(redirect)}`);

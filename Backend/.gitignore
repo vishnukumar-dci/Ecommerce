@@ -1,6 +1,4 @@
 .env
-public
 node_modules
 logs
-views
 uploads

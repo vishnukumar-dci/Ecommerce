@@ -1,7 +1,11 @@
 const Stripe = require("stripe");
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+const orderModel = require('../models/ordersModel')
+const orderItemModel = require('../models/orderItemModel')
+const cartModel = require('../models/cartModel')
+const logger = require('./logger')
 
-const handleWebhook = (req, res) => {
+const handleWebhook = async (req, res) => {
   const sig = req.headers["stripe-signature"];
 
   let event;
@@ -11,7 +15,7 @@ const handleWebhook = (req, res) => {
       sig,
       process.env.STRIPE_WEBHOOK_SECRET
     );
-    console.log(event)
+    console.log(event);
   } catch (err) {
     console.error("❌ Webhook signature verification failed:", err.message);
     return res.status(400).send(`Webhook Error: ${err.message}`);
@@ -19,51 +23,77 @@ const handleWebhook = (req, res) => {
 
   console.log(`⚡ Event received: ${event.type}`);
 
-  switch (event.type) {
+  try {
+    switch (event.type) {
+      case "checkout.session.completed": {
+        const session = event.data.object;
+        const orderId = session.metadata?.orderId;
+        const userId = session.metadata?.userId;
 
-    case "checkout.session.completed": {
-      const session = event.data.object;
-      console.log("✅ Checkout completed:");
-      console.log("Session ID:", session.id);
-      console.log("Customer Email:", session.customer_details?.email);
-      console.log("Subtotal:", session.amount_subtotal / 100, session.currency);
-      console.log("Total:", session.amount_total / 100, session.currency);
-      break;
+        if (!orderId) break;
+
+        const amount = session.amount_total / 100;
+        const status = "paid";
+
+        await orderModel.update(amount, status, orderId);
+
+        const orderItems = await orderItemModel.findByOrderId(orderId);
+
+        for (const item of orderItems) {
+          await orderItemModel.updateStatus(orderId, item.product_id, "paid");
+          await cartModel.removeItem(userId, item.product_id);
+        }
+
+        console.log("✅ Checkout completed:");
+        logger.info(`Order detail updated for orderId:${orderId} and UserId:${userId}`)
+        break;
+      }
+
+      case "charge.succeeded": {
+        const intent = event.data.object;
+        console.log("💰 Payment succeeded:");
+        console.log("PaymentIntent ID:", intent.id);
+        console.log("Amount:", intent.amount / 100, intent.currency);
+        console.log("Customer:", intent.customer);
+        break;
+      }
+
+      case "payment_intent.payment_failed":
+      case "charge.failed": {
+        const obj = event.data.object;
+        const orderId = obj.metadata?.orderId;
+
+        if (!orderId) break;
+
+        const amount = obj.amount ? obj.amount / 100 : 0;
+
+        await orderModel.update(amount, "failed", orderId);
+
+        const orderItems = await orderItemModel.findByOrderId(orderId);
+
+        for (const item of orderItems) {
+          await orderItemModel.updateStatus(orderId, item.product_id, "failed");
+        }
+
+        console.log(`❌ Order failed: orderId=${orderId}`);
+        break;
+      }
+
+      case "checkout.session.expired": {
+        console.log("⚠️ Session expired");
+        break;
+      }
+
+      default:
+        console.log(`⚠️ Unhandled event type: ${event.type}`);
     }
-
-    /**
-     * ✅ Fired when payment intent is successful
-     */
-    case "charge.succeeded": {
-      const intent = event.data.object;
-      console.log("💰 Payment succeeded:");
-      console.log("PaymentIntent ID:", intent.id);
-      console.log("Amount:", intent.amount / 100, intent.currency);
-      console.log("Customer:", intent.customer);
-      break;
-    }
-
-    /**
-     * ❌ Fired when payment fails (e.g. insufficient funds)
-     */
-    case "charge.failed": {
-      const intent = event.data.object;
-      console.log("❌ Payment failed:");
-      console.log("PaymentIntent ID:", intent.id);
-      console.log("Amount:", intent.amount / 100, intent.currency);
-      console.log("Failure Code:", intent.last_payment_error?.code);
-      console.log("Failure Message:", intent.last_payment_error?.message);
-      break;
-    }
-
-    case "checkout.session.expired":
-        console.log("session expired")
-    default:
-      console.log(`⚠️ Unhandled event type: ${event.type}`);
+  } catch (err) {
+    console.error("🔥 Error processing webhook event:", err.message, err.stack);
   }
 
   res.sendStatus(200);
 };
+
 
 async function checkout(lineItems,orderId,userId) {
   try {
@@ -74,10 +104,9 @@ async function checkout(lineItems,orderId,userId) {
             allow_promotion_codes: true,
             // include orderId and userId in metadata so webhook can verify and process the order
             metadata: { orderId: String(orderId), userId: String(userId) },
-            success_url: `http://localhost:3000/payment-status?session_Id={CHECKOUT_SESSION_ID}&orderId=${orderId}`,
-            cancel_url: `http://localhost:3000/payment-status?status=declined&orderId=${orderId}`
+            success_url: `http://localhost:3000/payment-status?orderId=${orderId}`,
+            cancel_url: `http://localhost:3000/payment-status?orderId=${orderId}&status=cancelled`,
         })
-
       return session.url
   } catch (error) {
       throw error

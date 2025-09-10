@@ -92,7 +92,7 @@ export default function AdminOrdersPage() {
       <h1 className="text-xl font-semibold">All Orders (Admin)</h1>
 
       {/* Date filters */}
-      <div className="flex items-center gap-3">
+      {/* <div className="flex items-center gap-3">
         <div>
           <label className="text-sm mr-2">From</label>
           <input
@@ -120,7 +120,7 @@ export default function AdminOrdersPage() {
         >
           Reset
         </button>
-      </div>
+      </div> */}
 
       {/* Table */}
       <div className="overflow-x-auto bg-white rounded border">
