@@ -9,6 +9,8 @@ router.get('/list',validate.validateTokenOptional,productController.getItems)
 
 router.get('/cartitem',inputValidate.getCartProduct,validate.validateInputs,validate.validateBearer,productController.getProduct)
 
+router.post('/add',upload.single('image'),productController.createProduct)
+
 //admin access only
 router.post('/create',upload.single('image'),inputValidate.createProduct,validate.validateInputs,validate.validateBearer,validate.isAdmin ,productController.createProduct)
 

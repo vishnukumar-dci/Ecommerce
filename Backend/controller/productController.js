@@ -1,4 +1,5 @@
 const productModel = require('../models/productsModel')
+const logger = require('../helper/logger')
 
 async function createProduct(req,res,next) {
 
@@ -14,6 +15,8 @@ async function createProduct(req,res,next) {
         const imagePath = req.file ? `/uploads/${req.file.filename}` : null
 
         const result = await productModel.create(name,description,amount,imagePath)
+
+        logger.info(`new product added successfully`)
 
         res.status(201).json({message:'Product added successfully'})
     } catch (error) {
@@ -79,6 +82,8 @@ async function updateById(req,res,next) {
         else{
             await productModel.update(productId,name,description,amount)
         }
+
+        logger.info(`Product was updated successfully`)
         res.status(200).json({message:'Product details updated'})
     } catch (error) {
         next(error)
@@ -101,6 +106,7 @@ async function HomePageImage(req,res,next) {
     try {
         const result = await productModel.imageRetreive()
         
+        logger.info(`Latest product reterived successfully`)
         res.status(200).json({message:'Product Sent successfully',products:result})
     } catch (error) {
         next(error)
