@@ -17,7 +17,12 @@ export default async function ProductsPage({ searchParams }: { searchParams: { q
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
+      {q && (
+        <div className="bg-blue-50 border border-blue-100 rounded-2xl p-4 text-sm font-semibold text-blue-700">
+          Showing search results for query: "{q}"
+        </div>
+      )}
       <AdminProducts products={products.map((p: any) => ({ id: p.id, product_name: p.product_name || p.name, amount: p.amount, descriptions: p.descriptions || p.description || "", image_path: p.image_path || p.image }))} />
     </div>
   );

@@ -14,6 +14,8 @@ router.get('/userhistory',validate.validateBearer,orderController.itemHistory)
 
 router.put('/update',validate.validateBearer,orderController.updateOrder)
 
+router.get('/payment-verify', orderController.verifyPayment)
+
 //admin
 router.get('/history', validate.validateBearer,validate.isAdmin,orderController.orderHistory)
 

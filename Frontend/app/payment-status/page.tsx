@@ -73,17 +73,20 @@
 // }
 "use client";
 import * as React from "react";
+import { Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import { useCart } from "@/lib/store/cart";
 import { api } from "@/lib/api";
 
-export default function PaymentResultPage() {
+function PaymentContent() {
   const searchParams = useSearchParams();
-  const orderId = searchParams.get("orderId");
-  const cancel = searchParams.get("status");
+  const orderId = searchParams?.get("orderId");
+  const cancel = searchParams?.get("status");
   const { removeMany } = useCart();
 
-  const [status, setStatus] = React.useState<"paid" | "failed" | "pending" | "cancelled" | null>(null);
+  const [status, setStatus] = React.useState<
+    "paid" | "failed" | "pending" | "cancelled" | null
+  >(null);
   const [amount, setAmount] = React.useState<number | null>(null);
   const [dateTime, setDateTime] = React.useState<string | null>(null);
 
@@ -98,14 +101,13 @@ export default function PaymentResultPage() {
         if (cancel === "cancelled") {
           setStatus("cancelled");
           clearInterval(interval);
-          const data = await api.updateStatus(Number(orderId))
+          const data = await api.updateStatus(Number(orderId));
           return;
         }
 
         const data = await api.updateOrder(Number(orderId));
 
         if (data.payment_status) {
-
           setStatus(data.payment_status as "paid" | "failed" | "pending");
 
           setAmount(data.amount ? parseFloat(data.amount) : null);
@@ -127,7 +129,7 @@ export default function PaymentResultPage() {
     };
 
     interval = window.setInterval(fetchStatus, 2000);
-    fetchStatus(); 
+    fetchStatus();
 
     return () => clearInterval(interval);
   }, [orderId, cancel, removeMany]);
@@ -163,8 +165,8 @@ export default function PaymentResultPage() {
           {status === "paid"
             ? "Payment Successful"
             : status === "cancelled"
-            ? "Payment Cancelled"
-            : "Payment Failed"}
+              ? "Payment Cancelled"
+              : "Payment Failed"}
         </h1>
 
         {/* Message */}
@@ -217,5 +219,23 @@ export default function PaymentResultPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="min-h-screen flex items-center justify-center text-gray-600 text-lg">
+      Loading…
+    </div>
+  );
+}
+
+export const dynamic = "force-dynamic";
+
+export default function PaymentResultPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <PaymentContent />
+    </Suspense>
   );
 }

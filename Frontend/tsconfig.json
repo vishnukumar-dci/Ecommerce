@@ -18,9 +18,15 @@
     "jsx": "preserve",
     "baseUrl": ".",
     "paths": {
-      "@/*": [
-        "./*"
-      ]
+      "@/*": ["./*"],
+      "@hooks/*": ["./hooks/*"],
+      "@services/*": ["./services/*"],
+      "@utils/*": ["./utils/*"],
+      "@types/*": ["./types/*"],
+      "@constants/*": ["./constants/*"],
+      "@components/*": ["./components/*"],
+      "@lib/*": ["./lib/*"],
+      "@store/*": ["./lib/store/*"]
     },
     "forceConsistentCasingInFileNames": true,
     "incremental": true,

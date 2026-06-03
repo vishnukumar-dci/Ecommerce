@@ -7,13 +7,8 @@ const orderRoute = require('./routes/ordersRoute')
 const productRoute = require('./routes/productRoute')
 const cartRoute = require('./routes/cartRoute')
 const errorHandler = require('./middleware/errorHandler')
-const bodyParser = require('body-parser')
-const {handleWebhook} = require('./helper/stripe')
-
 const app = express()
 const PORT = 8088
-
-app.post("/webhook",bodyParser.raw({type:"application/json"}),handleWebhook)
 
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))

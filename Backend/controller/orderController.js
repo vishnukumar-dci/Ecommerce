@@ -90,7 +90,7 @@ async function updateOrder(req, res, next) {
     const {orderId} = req.query
 
     await orderModel.updateStatus(orderId)
-    
+    res.status(200).json({ success: true, message: "Order status updated to cancelled" })
   } catch (error) {
     console.error("updateOrder error:", error);
     next(error);
@@ -102,11 +102,11 @@ async function paymentStatus(req,res,next) {
     const {orderId} = req.query;
 
     const order = await orderModel.getById(orderId)
-
-    // const items = await orderItemModel.findByOrderId(orderId)
+    const items = await orderItemModel.findByOrderId(orderId)
 
     res.status(200).json({
-      ...order[0]
+      ...order[0],
+      items
     })
     
   } catch (error) {
@@ -176,6 +176,54 @@ async function stripeLogs(req, res, next) {
   }
 }
 
+async function verifyPayment(req, res, next) {
+  const { session_id, cancelled } = req.query;
+
+  if (!session_id) {
+    return res.status(400).json({ message: "session_id query parameter is required" });
+  }
+
+  try {
+    const session = await stripe.checkout.sessions.retrieve(session_id);
+    const orderId = session.metadata?.orderId;
+    const userId = session.metadata?.userId;
+
+    if (!orderId) {
+      return res.status(400).json({ message: "Invalid session metadata: orderId missing" });
+    }
+
+    if (cancelled === "true" || session.payment_status !== "paid") {
+      const amount = session.amount_total ? session.amount_total / 100 : 0;
+      const status = cancelled === "true" ? "cancelled" : "failed";
+
+      await orderModel.update(amount, status, orderId);
+
+      const orderItems = await orderItemModel.findByOrderId(orderId);
+      for (const item of orderItems) {
+        await orderItemModel.updateStatus(orderId, item.product_id, status);
+      }
+
+      return res.redirect(`http://localhost:3000/payment-status?orderId=${orderId}&status=${status}`);
+    } else {
+      const amount = session.amount_total / 100;
+      const status = "paid";
+
+      await orderModel.update(amount, status, orderId);
+
+      const orderItems = await orderItemModel.findByOrderId(orderId);
+      for (const item of orderItems) {
+        await orderItemModel.updateStatus(orderId, item.product_id, "paid");
+        await cartModel.removeItem(userId, item.product_id);
+      }
+
+      return res.redirect(`http://localhost:3000/payment-status?orderId=${orderId}`);
+    }
+  } catch (error) {
+    console.error("Payment verification error:", error);
+    return res.redirect(`http://localhost:3000/payment-status?status=failed`);
+  }
+}
+
 module.exports = {
   Paynow,
   updateOrder,
@@ -184,4 +232,5 @@ module.exports = {
   stripeLogs,
   Buynow,
   paymentStatus,
+  verifyPayment,
 }
