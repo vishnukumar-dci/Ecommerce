@@ -23,7 +23,7 @@
 //   }
 
 //   async function onEdit() {
-    
+
 //   }
 
 //   return (
@@ -55,8 +55,8 @@
 //             >
 //               <path
 //                 fillRule="evenodd"
-//                 d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5 
-//                 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10 
+//                 d="M12 12c2.7 0 5-2.3 5-5s-2.3-5-5-5-5
+//                 2.3-5 5 2.3 5 5 5zm0 2c-3.3 0-10
 //                 1.7-10 5v3h20v-3c0-3.3-6.7-5-10-5z"
 //               />
 //             </svg>
@@ -102,7 +102,7 @@ export default function ProfilePage() {
   const auth = useAuth();
   const clearCart = useCart((s) => s.clear);
 
-  const router = useRouter()
+  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState<{
     name: string;
@@ -114,7 +114,7 @@ export default function ProfilePage() {
 
   async function logoutAll() {
     try {
-      await fetch("http://localhost:8088/customer/logout", {
+      await fetch("http://localhost:8000/customer/logout", {
         method: "GET",
         credentials: "include",
       });
@@ -141,13 +141,12 @@ export default function ProfilePage() {
         image: formData.image,
       });
 
-      
       const newUser = res.user;
       const newToken = res.token || auth.token;
 
       // overwrite cookie
       document.cookie = `auth=${encodeURIComponent(
-        JSON.stringify({ ...newUser, token: newToken })
+        JSON.stringify({ ...newUser, token: newToken }),
       )}; path=/;`;
 
       auth.setAuth({ ...newUser, token: newToken });
@@ -205,7 +204,10 @@ export default function ProfilePage() {
 
         {/* Action Buttons */}
         <div className="flex justify-between">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl" onClick={() => router.push('/products')}>
+          <Button
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl"
+            onClick={() => router.push("/products")}
+          >
             Shop Now
           </Button>
           <Button

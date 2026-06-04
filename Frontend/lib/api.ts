@@ -1,4 +1,4 @@
-const BASE_URL = "http://localhost:8088";
+const BASE_URL = "http://localhost:8000";
 
 export const assetUrl = (path?: string) => {
   if (!path) return "";
@@ -26,7 +26,7 @@ const buildUrl = (path: string, params?: FetchOptions["params"]) => {
 
 export async function apiFetch<T>(
   path: string,
-  { method = "GET", body, params, headers }: FetchOptions = {}
+  { method = "GET", body, params, headers }: FetchOptions = {},
 ): Promise<T> {
   const url = buildUrl(path, params);
 
@@ -34,7 +34,9 @@ export async function apiFetch<T>(
   let token: string | undefined;
   if (typeof window !== "undefined") {
     try {
-      const cookie = document.cookie?.split(";").find(c => c.trim().startsWith("auth="));
+      const cookie = document.cookie
+        ?.split(";")
+        .find((c) => c.trim().startsWith("auth="));
       if (cookie) {
         const json = decodeURIComponent(cookie.split("=")[1] || "{}");
         const parsed = JSON.parse(json || "{}");
@@ -43,9 +45,12 @@ export async function apiFetch<T>(
     } catch {}
   }
 
-  console.log(`apiFetch: ${method} ${url} ${token ? '(with token)' : '(no token)'}`);
+  console.log(
+    `apiFetch: ${method} ${url} ${token ? "(with token)" : "(no token)"}`,
+  );
 
-  const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
+  const isFormData =
+    typeof FormData !== "undefined" && body instanceof FormData;
 
   const finalHeaders: Record<string, string> = {};
   if (!isFormData) finalHeaders["Content-Type"] = "application/json";
@@ -65,7 +70,8 @@ export async function apiFetch<T>(
     try {
       const data = await res.json();
       console.log("apiFetch error response:", data);
-      msg = typeof data?.message === "string" ? data.message : JSON.stringify(data);
+      msg =
+        typeof data?.message === "string" ? data.message : JSON.stringify(data);
     } catch {}
     throw new Error(msg);
   }
@@ -82,16 +88,16 @@ export const api = {
     apiFetch<any>("/customer/login", { method: "POST", body }),
 
   updateProfile: (body: { name: string; image?: File }) => {
-  const formData = new FormData();
-  formData.append("name", body.name);
-  if (body.image) formData.append("image", body.image);
+    const formData = new FormData();
+    formData.append("name", body.name);
+    if (body.image) formData.append("image", body.image);
 
-  return apiFetch<any>("/customer/update", {
-    method: "PUT",
-    body: formData,
-    headers: {}, // token will be injected in apiFetch
-  });
-},
+    return apiFetch<any>("/customer/update", {
+      method: "PUT",
+      body: formData,
+      headers: {}, // token will be injected in apiFetch
+    });
+  },
 
   /** Products **/
   productList: async () => {
@@ -99,39 +105,60 @@ export const api = {
     const list = res?.list || res?.data || [];
     return { list, data: list };
   },
-  
+
   /** Homepage - latest products (optional limit param) */
   homepageProducts: async () => {
-    const res = await apiFetch<any>("/product/homepage", {method: "GET"});
+    const res = await apiFetch<any>("/product/homepage", { method: "GET" });
     const list = res?.products || [];
     return { list, data: list };
   },
 
-  addProduct: (body: { name: string; description: string; amount: number; image?: File }) => {
-  const form = new FormData();
-  form.append("name", body.name);
-  form.append("description", body.description);
-  form.append("amount", String(body.amount));
-  if (body.image) form.append("image", body.image); // File object
+  addProduct: (body: {
+    name: string;
+    description: string;
+    amount: number;
+    image?: File;
+  }) => {
+    const form = new FormData();
+    form.append("name", body.name);
+    form.append("description", body.description);
+    form.append("amount", String(body.amount));
+    if (body.image) form.append("image", body.image); // File object
 
-  console.log("Sending form data:", [...form.entries()]); // debug
+    console.log("Sending form data:", [...form.entries()]); // debug
 
-  return apiFetch<any>("/product/create", { method: "POST", body: form });
-},
-  updateProduct: (productId: number, body: { name?: string; description?: string; amount?: number; image?: File }) => {
+    return apiFetch<any>("/product/create", { method: "POST", body: form });
+  },
+  updateProduct: (
+    productId: number,
+    body: {
+      name?: string;
+      description?: string;
+      amount?: number;
+      image?: File;
+    },
+  ) => {
     const form = new FormData();
     if (body.name !== undefined) form.append("name", String(body.name));
-    if (body.description !== undefined) form.append("description", String(body.description));
+    if (body.description !== undefined)
+      form.append("description", String(body.description));
     if (body.amount !== undefined) form.append("amount", String(body.amount));
     if (body.image) form.append("image", body.image);
-    return apiFetch<any>("/product/update", { method: "PUT", params: { productId }, body: form, headers: {} });
+    return apiFetch<any>("/product/update", {
+      method: "PUT",
+      params: { productId },
+      body: form,
+      headers: {},
+    });
   },
   deleteProduct: (productId: number) =>
-    apiFetch<any>("/product/delete", { method: "DELETE", params: { productId } }),
+    apiFetch<any>("/product/delete", {
+      method: "DELETE",
+      params: { productId },
+    }),
 
   /** Cart **/
-  cartList: () => 
-    apiFetch<{products: any[]}>("/cart/list"),
+  cartList: () => apiFetch<{ products: any[] }>("/cart/list"),
   cartAdd: (userId: number, productId: number) =>
     apiFetch<any>("/cart/create", { method: "POST", body: { productId } }),
   cartDecrement: (productId: number) =>
@@ -141,36 +168,46 @@ export const api = {
   cartDeleteAll: () => apiFetch<any>("/cart/delete", { method: "DELETE" }),
 
   /** Orders **/
-  createOrder: (body: { productIds: number[]; qtys: number[] }) => 
+  createOrder: (body: { productIds: number[]; qtys: number[] }) =>
     apiFetch<any>("/order/create", { method: "POST", body }),
-  createSingle:(body:{productId:number; qty:number}) =>
-    apiFetch<any>("order/buynow",{method:"POST",body}),
+  createSingle: (body: { productId: number; qty: number }) =>
+    apiFetch<any>("order/buynow", { method: "POST", body }),
   // Explicit helper to create a Stripe checkout session
   createCheckout: (body: { productIds: number[]; qtys: number[] }) =>
     apiFetch<any>("/order/create", { method: "POST", body }),
   updateOrder: (orderId: number) => {
-    const res = apiFetch<{items:any[],payment_status:any,amount:any,created_at:any}>("/order/status", { method: "GET", params: { orderId} })
-    console.log(res)
-    return res
+    const res = apiFetch<{
+      items: any[];
+      payment_status: any;
+      amount: any;
+      created_at: any;
+    }>("/order/status", { method: "GET", params: { orderId } });
+    console.log(res);
+    return res;
   },
 
-  updateStatus:(orderId:number) => {
-    apiFetch<any>("/order/update",{method:"PUT",params:{orderId}})
+  updateStatus: (orderId: number) => {
+    apiFetch<any>("/order/update", { method: "PUT", params: { orderId } });
   },
   /**Admin order History **/
-  orderHistory: async (page:number ,limit :number) => {
-    const res = await apiFetch<{history: any[],totalRecords:any}>("/order/history?page="+page+"&limit="+limit)
-    console.log('api.orderHistory: response', res)
-    return res
+  orderHistory: async (page: number, limit: number) => {
+    const res = await apiFetch<{ history: any[]; totalRecords: any }>(
+      "/order/history?page=" + page + "&limit=" + limit,
+    );
+    console.log("api.orderHistory: response", res);
+    return res;
   },
   /**customer order History **/
-  customerOrders:(page:number,limit:number) =>
-    apiFetch<{history:any[],totalRecords:any}>("/order/userhistory",{method:"GET" , params:{page,limit}}),
+  customerOrders: (page: number, limit: number) =>
+    apiFetch<{ history: any[]; totalRecords: any }>("/order/userhistory", {
+      method: "GET",
+      params: { page, limit },
+    }),
 
   /**Strip logs **/
-  stripeLogs: async() =>{
-    const res = await apiFetch<{logs: any[],totalLogs:any}>("/order/log")
-    console.log(`api.stripeLogs:response`,res)
-    return res
-  } 
+  stripeLogs: async () => {
+    const res = await apiFetch<{ logs: any[]; totalLogs: any }>("/order/log");
+    console.log(`api.stripeLogs:response`, res);
+    return res;
+  },
 };

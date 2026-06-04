@@ -15,15 +15,18 @@ export default function CheckoutPage() {
   const [error, setError] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   async function placeOrder() {
-    setLoading(true); setError(null);
+    setLoading(true);
+    setError(null);
     try {
-      const productIds = items.map(i => i.product_id);
-      const qtys = items.map(i => i.qty);
+      const productIds = items.map((i) => i.product_id);
+      const qtys = items.map((i) => i.qty);
 
-      const res = await fetch("http://localhost:8088/order/create", {
+      const res = await fetch("http://localhost:8000/order/create", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -62,21 +65,42 @@ export default function CheckoutPage() {
         <div className="rounded-2xl border p-4">
           <h2 className="font-semibold mb-3">Shipping Address</h2>
           <Label htmlFor="addr">Address</Label>
-          <Input id="addr" value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Flat, Street, City, Pincode" />
+          <Input
+            id="addr"
+            value={address}
+            onChange={(e) => setAddress(e.target.value)}
+            placeholder="Flat, Street, City, Pincode"
+          />
         </div>
         <div className="rounded-2xl border p-4">
           <h2 className="font-semibold mb-3">Payment</h2>
-          <select className="h-10 rounded-xl border px-3" value={payment} onChange={(e) => setPayment(e.target.value)}>
+          <select
+            className="h-10 rounded-xl border px-3"
+            value={payment}
+            onChange={(e) => setPayment(e.target.value)}
+          >
             <option value="card">Card</option>
           </select>
         </div>
       </div>
       <div className="rounded-2xl border p-4 h-fit">
         <h2 className="font-semibold mb-3">Order Summary</h2>
-        <div className="flex justify-between"><span>Items</span><span>{mounted ? items.length : 0}</span></div>
-        <div className="flex justify-between"><span>Total</span><span className="font-semibold">₹{mounted ? total().toLocaleString() : 0}</span></div>
+        <div className="flex justify-between">
+          <span>Items</span>
+          <span>{mounted ? items.length : 0}</span>
+        </div>
+        <div className="flex justify-between">
+          <span>Total</span>
+          <span className="font-semibold">
+            ₹{mounted ? total().toLocaleString() : 0}
+          </span>
+        </div>
         {error && <div className="text-red-600 mt-2 text-sm">{error}</div>}
-        <Button className="w-full mt-4" disabled={loading || items.length===0} onClick={placeOrder}>
+        <Button
+          className="w-full mt-4"
+          disabled={loading || items.length === 0}
+          onClick={placeOrder}
+        >
           {loading ? "Redirecting..." : "Place Order"}
         </Button>
       </div>
